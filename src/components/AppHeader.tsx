@@ -83,35 +83,27 @@ export function AppHeader({ title = "Orisale", subtitle }: AppHeaderProps) {
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3 sm:px-5 sm:py-4">
+        <div className="mx-auto flex max-w-md items-center justify-between px-5 py-4">
           <div>
-            <Link to="/" className="text-lg font-bold tracking-tight sm:text-xl">
+            <Link to="/" className="text-xl font-bold tracking-tight">
               {title}
             </Link>
-
-            {subtitle && (
-              <p className="text-xs text-muted-foreground">
-                {subtitle}
-              </p>
-            )}
+            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           </div>
-
           <div className="flex items-center gap-2">
             <button
               aria-label="Search"
               onClick={() => setSearchOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-foreground transition-all duration-200 hover:scale-105 hover:bg-accent active:scale-95"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-foreground transition-colors hover:bg-accent"
             >
               <Search className="h-4 w-4" />
             </button>
-
             <button
               aria-label="Notifications"
               onClick={() => setNotificationsOpen(true)}
-              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-foreground transition-all duration-200 hover:scale-105 hover:bg-accent active:scale-95"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-foreground transition-colors hover:bg-accent"
             >
               <Bell className="h-4 w-4" />
-
               <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-warning" />
             </button>
           </div>
@@ -127,20 +119,17 @@ export function AppHeader({ title = "Orisale", subtitle }: AppHeaderProps) {
               placeholder="Search creators, content, or IP"
               className="w-full rounded-2xl border border-border bg-background px-4 py-3 focus:border-primary focus:outline-none"
             />
-
             <div className="space-y-2">
               {query && results.length === 0 && (
                 <p className="rounded-2xl bg-secondary px-4 py-3 text-sm text-muted-foreground">
                   No results yet. Try a creator name, content title, or IP category.
                 </p>
               )}
-
               {!query && (
                 <p className="rounded-2xl bg-secondary px-4 py-3 text-sm text-muted-foreground">
                   Try "Lina Park", "PromptForge", or "Newsletter".
                 </p>
               )}
-
               {results.map((result) => (
                 <Link
                   key={result.id}
@@ -148,13 +137,8 @@ export function AppHeader({ title = "Orisale", subtitle }: AppHeaderProps) {
                   onClick={() => setSearchOpen(false)}
                   className="block rounded-2xl bg-card px-4 py-3 shadow-soft transition-transform hover:-translate-y-0.5"
                 >
-                  <p className="text-sm font-semibold">
-                    {result.label}
-                  </p>
-
-                  <p className="text-xs text-muted-foreground">
-                    {result.sublabel}
-                  </p>
+                  <p className="text-sm font-semibold">{result.label}</p>
+                  <p className="text-xs text-muted-foreground">{result.sublabel}</p>
                 </Link>
               ))}
             </div>
@@ -163,44 +147,30 @@ export function AppHeader({ title = "Orisale", subtitle }: AppHeaderProps) {
       )}
 
       {notificationsOpen && (
-        <OverlayShell
-          title="Notifications"
-          onClose={() => setNotificationsOpen(false)}
-        >
+        <OverlayShell title="Notifications" onClose={() => setNotificationsOpen(false)}>
           <div className="space-y-4">
             <button
               type="button"
               onClick={() => {
                 const next = !pushEnabled;
                 setPushEnabled(next);
-
-                toast.success(
-                  next ? "Push updates enabled" : "Push updates paused",
-                );
+                toast.success(next ? "Push updates enabled" : "Push updates paused");
               }}
               className={cn(
-                "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all duration-200",
-                pushEnabled
-                  ? "border-primary bg-primary-soft"
-                  : "border-border bg-card",
+                "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left",
+                pushEnabled ? "border-primary bg-primary-soft" : "border-border bg-card",
               )}
             >
               <div>
-                <p className="text-sm font-semibold">
-                  Push updates
-                </p>
-
+                <p className="text-sm font-semibold">Push updates</p>
                 <p className="text-xs text-muted-foreground">
                   Get notified when creators post new drops and product updates.
                 </p>
               </div>
-
               <span
                 className={cn(
                   "rounded-full px-2.5 py-1 text-[10px] font-semibold",
-                  pushEnabled
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary",
+                  pushEnabled ? "bg-primary text-primary-foreground" : "bg-secondary",
                 )}
               >
                 {pushEnabled ? "On" : "Off"}
@@ -209,14 +179,8 @@ export function AppHeader({ title = "Orisale", subtitle }: AppHeaderProps) {
 
             <div className="space-y-2">
               {updates.map((update) => (
-                <div
-                  key={update.id}
-                  className="rounded-2xl bg-card px-4 py-3 shadow-soft transition-transform duration-200 hover:-translate-y-1"
-                >
-                  <p className="text-sm font-semibold">
-                    {update.title}
-                  </p>
-
+                <div key={update.id} className="rounded-2xl bg-card px-4 py-3 shadow-soft">
+                  <p className="text-sm font-semibold">{update.title}</p>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     {update.body}
                   </p>
@@ -240,22 +204,18 @@ function OverlayShell({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-4 backdrop-blur-sm sm:py-6">
-      <div className="w-full max-w-md rounded-3xl bg-background p-4 shadow-pop sm:p-5">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 py-6 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl bg-background p-5 shadow-pop">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">
-            {title}
-          </h2>
-
+          <h2 className="text-lg font-bold">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-accent"
+            className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold"
           >
             Close
           </button>
         </div>
-
         {children}
       </div>
     </div>
