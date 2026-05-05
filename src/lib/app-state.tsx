@@ -1,0 +1,701 @@
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BrowserProvider, formatEther } from "ethers";
+import {
+  AppStateContext,
+  type MarketListing,
+  type AppStateContextValue,
+  type AppStateSnapshot,
+} from "@/lib/app-state-context";
+import {
+  CONTENT,
+  CREATORS,
+  IP_ASSETS,
+  type ContentItem,
+  type IpAsset,
+  getCreatorByName,
+} from "@/lib/data";
+import { authAPI, ipAPI, transactionAPI, type User, type IP } from "@/lib/api-client";
+
+const STORAGE_KEY = "popup-app-state-v1";
+const AUTH_TOKEN_KEY = "auth_token";
+const DEMO_CREATOR_NAME = "Mira Osei";
+const LOCAL_DEMO_TOKEN_PREFIX = "local-demo:";
+
+const typeCategory: Record<ContentItem["type"], string> = {
+  pdf: "Guide",
+  art: "Artwork",
+  tool: "Tool",
+};
+
+const typeCover: Record<ContentItem["type"], string> = {
+  pdf: "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=900&q=70",
+  art: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=900&q=70",
+  tool: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70",
+};
+
+// Convert API IP to frontend IpAsset format
+const apiIPToIpAsset = (ip: IP): IpAsset => ({
+  id: ip.id,
+  title: ip.title,
+  creator: ip.creator_id,
+  cover: ip.cover_image_url || typeCover.art,
+  category: ip.category || "Digital Asset",
+  shares: ip.total_supply || 1000,
+  pricePerShare: (ip.current_price || 100) / 100,
+  monthlyRevenue: Math.round((ip.current_liquidity || 0) / 10) || 250,
+  change24h: 0,
+  description: ip.description || "Fractionalized digital asset",
+});
+
+const createLocalDemoUser = (walletAddress: string, isCreator = false): User => ({
+  id: `local-${walletAddress.toLowerCase()}`,
+  wallet_address: walletAddress,
+  username: `creator_${walletAddress.slice(2, 8)}`,
+  is_creator: isCreator,
+  cash_balance: 0,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+
+const seedListings = (id: string, basePrice: number): MarketListing[] => {
+  const seed = id.charCodeAt(id.length - 1) || 1;
+  const sellers = [
+    { n: "Mira O.", a: "MO" },
+    { n: "Devon L.", a: "DL" },
+    { n: "Eden C.", a: "EC" },
+    { n: "Otto V.", a: "OV" },
+    { n: "Kai R.", a: "KR" },
+    { n: "Nova S.", a: "NS" },
+  ];
+
+  return sellers.map((seller, i) => {
+    const drift = ((seed + i * 3) % 9) - 4;
+    const price = Math.max(0.5, +(basePrice + drift * (basePrice * 0.05)).toFixed(2));
+    const qty = ((seed + i) % 5) + 1;
+    const ages = ["2m ago", "14m ago", "1h ago", "3h ago", "9h ago", "1d ago"];
+    return {
+      id: `${id}-l${i}`,
+      ipId: id,
+      seller: seller.n,
+      avatar: seller.a,
+      qty,
+      price,
+      listedAgo: ages[i % ages.length],
+    };
+  });
+};
+
+const initialSnapshot: AppStateSnapshot = {
+  signedIn: false,
+  creatorProfileActive: false,
+  walletConnected: false,
+  walletAddress: null,
+  walletBalance: 0,
+  pushEnabled: true,
+  cashBalance: 0, // Will be set from API
+  ownedContentIds: [],
+  followedCreatorSlugs: [],
+  savedContentIds: [],
+  likedContentIds: [],
+  createdContent: [],
+  createdIpAssets: [],
+  marketListings: [], // Will load from API
+  ipHoldings: {},
+  contentOrders: [],
+  contentPurchaseCounts: {},
+};
+
+export function AppStateProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AppStateSnapshot>(initialSnapshot);
+  const [user, setUser] = useState<User | null>(null);
+  const [apiIPs, setApiIPs] = useState<IP[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Restore auth on mount
+  useEffect(() => {
+    const restoreWallet = async () => {
+      if (!window.ethereum) return;
+
+      try {
+        const provider = new BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_accounts", []);
+        const walletAddress = accounts[0];
+        if (!walletAddress) return;
+
+        let walletBalance = 0;
+        try {
+          const balance = await provider.getBalance(walletAddress);
+          walletBalance = Number(formatEther(balance));
+        } catch (balanceError) {
+          console.warn("Failed to fetch wallet balance, using 0:", balanceError);
+          // Continue without balance - it will be updated later
+        }
+
+        setState((prev) => ({
+          ...prev,
+          walletConnected: true,
+          walletAddress,
+          walletBalance,
+        }));
+      } catch (error) {
+        console.error("Failed to restore wallet session:", error);
+      }
+    };
+
+    const restoreAuth = async () => {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (token) {
+        try {
+          if (token.startsWith(LOCAL_DEMO_TOKEN_PREFIX)) {
+            const walletAddress = token.slice(LOCAL_DEMO_TOKEN_PREFIX.length);
+            const demoUser = createLocalDemoUser(walletAddress);
+            setUser(demoUser);
+            setState((prev) => ({
+              ...prev,
+              signedIn: true,
+              creatorProfileActive: demoUser.is_creator,
+            }));
+            return;
+          }
+
+          const profile = await authAPI.getProfile();
+          setUser(profile);
+          setState((prev) => ({
+            ...prev,
+            signedIn: true,
+            creatorProfileActive: profile.is_creator,
+            cashBalance: profile.cash_balance / 100,
+          }));
+        } catch (error) {
+          console.error("Failed to restore auth:", error);
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+        }
+      }
+    };
+
+    restoreWallet();
+    restoreAuth();
+    // Load IP data on mount
+    loadIPData();
+  }, []);
+
+  // Load IP data from API
+  const loadIPData = async () => {
+    try {
+      const ips = await ipAPI.list();
+      setApiIPs(ips);
+      // Update state with fetched IPs as market listings
+      const listings = ips.flatMap((ip) =>
+        seedListings(ip.id, (ip.current_price || 100) / 100).slice(0, 3),
+      );
+      setState((prev) => ({
+        ...prev,
+        marketListings: listings,
+      }));
+    } catch (error) {
+      console.error("Failed to load IPs:", error);
+    }
+  };
+
+  // Restore local state on mount
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<AppStateSnapshot>;
+      const {
+        signedIn: _signedIn,
+        creatorProfileActive: _creatorProfileActive,
+        walletConnected: _walletConnected,
+        walletAddress: _walletAddress,
+        walletBalance: _walletBalance,
+        ...persistedState
+      } = parsed;
+
+      setState((prev) => ({ ...prev, ...persistedState }));
+    } catch {
+      // Ignore localStorage hydration failures
+    }
+  }, []);
+
+  // Persist state
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Ignore persistence failures
+    }
+  }, [state]);
+
+  const value = useMemo<AppStateContextValue>(
+    () => ({
+      ...state,
+      contentCatalog: [...state.createdContent, ...CONTENT].map((item) => ({
+        ...item,
+        sales: item.sales + (state.contentPurchaseCounts[item.id] ?? 0),
+      })),
+      ipCatalog: [
+        ...state.createdIpAssets,
+        ...(apiIPs.length > 0 ? apiIPs.map(apiIPToIpAsset) : IP_ASSETS),
+      ],
+
+      // ===== REAL WALLET CONNECT =====
+      connectWallet: async () => {
+        try {
+          setIsLoading(true);
+          if (!window.ethereum) {
+            throw new Error(
+              "No Web3 wallet detected. Please install one: MetaMask (metamask.io), Zerion (zerion.io), Coinbase Wallet, or WalletConnect",
+            );
+          }
+
+          const provider = new BrowserProvider(window.ethereum);
+          const accounts = await provider.send("eth_requestAccounts", []);
+          const walletAddress = accounts[0];
+
+          if (!walletAddress) throw new Error("No wallet selected");
+          
+          let walletBalance = 0;
+          try {
+            const balance = await provider.getBalance(walletAddress);
+            walletBalance = Number(formatEther(balance));
+          } catch (balanceError) {
+            console.warn("Failed to fetch wallet balance, using 0:", balanceError);
+            // Continue without balance - it will be updated later
+          }
+
+          setState((prev) => ({
+            ...prev,
+            walletConnected: true,
+            walletAddress,
+            walletBalance,
+          }));
+
+          return { ok: true as const };
+        } catch (error) {
+          console.error("Wallet connection failed:", error);
+          return { ok: false as const, reason: (error as Error).message };
+        } finally {
+          setIsLoading(false);
+        }
+      },
+
+      disconnectWallet: () => {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        setUser(null);
+        setState((prev) => ({
+          ...prev,
+          signedIn: false,
+          creatorProfileActive: false,
+          walletConnected: false,
+          walletAddress: null,
+          walletBalance: 0,
+        }));
+      },
+
+      // ===== CREATOR AUTHENTICATION =====
+      signIn: async () => {
+        try {
+          setIsLoading(true);
+
+          if (!state.walletConnected || !window.ethereum) {
+            throw new Error("Connect your wallet first to create a creator profile.");
+          }
+
+          const provider = new BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          const walletAddress = await signer.getAddress();
+
+          // Generate authentication message
+          const message = `creator-commerce-hub:${Date.now()}:${Math.random()
+            .toString(36)
+            .substring(7)}`;
+
+          // Sign the message
+          const signature = await signer.signMessage(message);
+
+          // Login to backend
+          try {
+            const { user: apiUser, token } = await authAPI.login(walletAddress, message, signature);
+
+            localStorage.setItem(AUTH_TOKEN_KEY, token);
+            setUser(apiUser);
+            setState((prev) => ({
+              ...prev,
+              signedIn: true,
+              creatorProfileActive: apiUser.is_creator,
+              cashBalance: apiUser.cash_balance / 100,
+            }));
+
+            await loadIPData();
+          } catch (error) {
+            console.warn("Backend auth unavailable, continuing in local demo mode:", error);
+            const demoUser = createLocalDemoUser(walletAddress);
+            localStorage.setItem(AUTH_TOKEN_KEY, `${LOCAL_DEMO_TOKEN_PREFIX}${walletAddress}`);
+            setUser(demoUser);
+            setState((prev) => ({
+              ...prev,
+              signedIn: true,
+              creatorProfileActive: false,
+            }));
+          }
+
+          return { ok: true as const };
+        } catch (error) {
+          console.error("Sign in failed:", error);
+          return { ok: false as const, reason: (error as Error).message };
+        } finally {
+          setIsLoading(false);
+        }
+      },
+
+      signOut: () => {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        setUser(null);
+        setState((prev) => ({
+          ...prev,
+          signedIn: false,
+          creatorProfileActive: false,
+        }));
+      },
+
+      enableCreatorProfile: async () => {
+        try {
+          if (!user) throw new Error("Not signed in");
+
+          let updatedUser: User;
+          try {
+            updatedUser = await authAPI.updateProfile({
+              is_creator: true,
+            });
+          } catch (error) {
+            console.warn(
+              "Backend profile update unavailable, activating creator mode locally:",
+              error,
+            );
+            updatedUser = {
+              ...user,
+              is_creator: true,
+              updated_at: new Date().toISOString(),
+            };
+            localStorage.setItem(
+              AUTH_TOKEN_KEY,
+              `${LOCAL_DEMO_TOKEN_PREFIX}${updatedUser.wallet_address}`,
+            );
+          }
+
+          setUser(updatedUser);
+          setState((prev) => ({
+            ...prev,
+            creatorProfileActive: true,
+          }));
+
+          return { ok: true as const };
+        } catch (error) {
+          console.error("Creator profile activation failed:", error);
+          return { ok: false as const, reason: (error as Error).message };
+        }
+      },
+
+      setPushEnabled: (enabled: boolean) => {
+        setState((prev) => ({ ...prev, pushEnabled: enabled }));
+      },
+
+      // ===== IP/PRODUCT OPERATIONS =====
+      publishContent: async ({ type, title, description, price, tokenize, fileName }) => {
+        try {
+          if (!user || !state.walletConnected || !state.signedIn || !state.creatorProfileActive) {
+            return { contentId: "", ipId: "", error: "Creator profile required" };
+          }
+
+          const now = Date.now();
+          const creator = getCreatorByName(DEMO_CREATOR_NAME) ?? CREATORS[0];
+          const contentId = `ugc-${now}`;
+
+          // Create content locally
+          const nextContent: ContentItem = {
+            id: contentId,
+            title,
+            creator: creator.name,
+            creatorAvatar: creator.avatar,
+            type,
+            price,
+            cover: typeCover[type],
+            description,
+            rating: 0,
+            sales: 0,
+            category: typeCategory[type],
+            pages: type === "pdf" ? 24 : undefined,
+            fileSize: type === "tool" ? "24 MB" : undefined,
+            platform: type === "tool" ? "macOS | Windows" : undefined,
+            artStyle: type === "art" ? "Original" : undefined,
+          };
+
+          let ipId = "";
+
+          // If tokenizing, create IP asset on backend
+          if (tokenize) {
+            const initialLiquidity = price;
+
+            try {
+              const newIP = await ipAPI.create({
+                title,
+                description,
+                category: typeCategory[type],
+                coverImageUrl: typeCover[type],
+                initialLiquidityUSD: initialLiquidity,
+                launchDurationDays: 14,
+              });
+
+              ipId = newIP.id;
+
+              setState((prev) => ({
+                ...prev,
+                createdIpAssets: [apiIPToIpAsset(newIP), ...prev.createdIpAssets],
+                ipHoldings: {
+                  ...prev.ipHoldings,
+                  [ipId]: 250,
+                },
+              }));
+            } catch (error) {
+              console.warn("Backend IP creation unavailable, creating a local demo IP:", error);
+              ipId = `local-ip-${now}`;
+
+              const localIpAsset: IpAsset = {
+                id: ipId,
+                title,
+                creator: creator.name,
+                cover: typeCover[type],
+                category: typeCategory[type],
+                shares: 1000,
+                pricePerShare: Math.max(price / 100, 1),
+                monthlyRevenue: Math.round(price * 12),
+                change24h: 0,
+                description,
+              };
+
+              setState((prev) => ({
+                ...prev,
+                createdIpAssets: [localIpAsset, ...prev.createdIpAssets],
+                ipHoldings: {
+                  ...prev.ipHoldings,
+                  [ipId]: 250,
+                },
+              }));
+            }
+          }
+
+          setState((prev) => ({
+            ...prev,
+            createdContent: [nextContent, ...prev.createdContent],
+            ownedContentIds: [contentId, ...prev.ownedContentIds],
+          }));
+
+          return { contentId, ipId };
+        } catch (error) {
+          console.error("Publish failed:", error);
+          return { contentId: "", ipId: "", error: (error as Error).message };
+        }
+      },
+
+      // ===== TRADING OPERATIONS =====
+      buyIpListing: async (listingId: string) => {
+        try {
+          if (!state.walletConnected) {
+            return { ok: false as const, reason: "Connect your wallet first" };
+          }
+
+          const listing = state.marketListings.find((item) => item.id === listingId);
+          if (!listing) return { ok: false as const, reason: "Listing not found" };
+
+          // Execute buy on backend
+          const total = listing.qty * listing.price;
+          await transactionAPI.buy(listing.ipId, total);
+
+          // Update local state
+          setState((prev) => ({
+            ...prev,
+            cashBalance: +(prev.cashBalance - total).toFixed(2),
+            marketListings: prev.marketListings.filter((item) => item.id !== listingId),
+            ipHoldings: {
+              ...prev.ipHoldings,
+              [listing.ipId]: (prev.ipHoldings[listing.ipId] ?? 0) + listing.qty,
+            },
+          }));
+
+          return { ok: true as const, qty: listing.qty, price: listing.price };
+        } catch (error) {
+          console.error("Buy failed:", error);
+          return { ok: false as const, reason: (error as Error).message };
+        }
+      },
+
+      sellIpToPool: async ({ ipId, qty, pricePerShare }) => {
+        try {
+          if (!state.walletConnected) {
+            return { ok: false as const, reason: "Connect your wallet first" };
+          }
+
+          const available = state.ipHoldings[ipId] ?? 0;
+          if (available < qty) {
+            return { ok: false as const, reason: "Not enough shares" };
+          }
+
+          // Execute sell on backend
+          const total = qty * pricePerShare;
+          await transactionAPI.sell(ipId, qty);
+
+          // Update local state
+          setState((prev) => ({
+            ...prev,
+            cashBalance: +(prev.cashBalance + total).toFixed(2),
+            ipHoldings: {
+              ...prev.ipHoldings,
+              [ipId]: (prev.ipHoldings[ipId] ?? 0) - qty,
+            },
+          }));
+
+          return { ok: true as const, proceeds: total };
+        } catch (error) {
+          console.error("Sell failed:", error);
+          return { ok: false as const, reason: (error as Error).message };
+        }
+      },
+
+      // ===== MOCK OPERATIONS (unchanged for compatibility) =====
+      purchaseContent: (contentId: string) => {
+        const item = [...state.createdContent, ...CONTENT].find(
+          (content) => content.id === contentId,
+        );
+        if (!item) return { ok: false, reason: "Content not found." };
+        if (state.ownedContentIds.includes(contentId)) {
+          return { ok: true, alreadyOwned: true, price: item.price };
+        }
+        if (item.price > state.cashBalance) {
+          return { ok: false, reason: "Not enough balance to complete this purchase." };
+        }
+
+        setState((prev) => ({
+          ...prev,
+          cashBalance: +(prev.cashBalance - item.price).toFixed(2),
+          ownedContentIds: [contentId, ...prev.ownedContentIds],
+          contentOrders: [
+            {
+              id: `order-${contentId}-${Date.now()}`,
+              contentId,
+              title: item.title,
+              amount: item.price,
+              createdAt: Date.now(),
+            },
+            ...prev.contentOrders,
+          ],
+          contentPurchaseCounts: {
+            ...prev.contentPurchaseCounts,
+            [contentId]: (prev.contentPurchaseCounts[contentId] ?? 0) + 1,
+          },
+        }));
+
+        return { ok: true, price: item.price };
+      },
+
+      toggleFollowCreator: (slug: string) => {
+        let following = false;
+        setState((prev) => {
+          const exists = prev.followedCreatorSlugs.includes(slug);
+          following = !exists;
+          return {
+            ...prev,
+            followedCreatorSlugs: exists
+              ? prev.followedCreatorSlugs.filter((item) => item !== slug)
+              : [slug, ...prev.followedCreatorSlugs],
+          };
+        });
+        return following;
+      },
+
+      toggleSavedContent: (contentId: string) => {
+        let saved = false;
+        setState((prev) => {
+          const exists = prev.savedContentIds.includes(contentId);
+          saved = !exists;
+          return {
+            ...prev,
+            savedContentIds: exists
+              ? prev.savedContentIds.filter((item) => item !== contentId)
+              : [contentId, ...prev.savedContentIds],
+          };
+        });
+        return saved;
+      },
+
+      toggleLikedContent: (contentId: string) => {
+        let liked = false;
+        setState((prev) => {
+          const exists = prev.likedContentIds.includes(contentId);
+          liked = !exists;
+          return {
+            ...prev,
+            likedContentIds: exists
+              ? prev.likedContentIds.filter((item) => item !== contentId)
+              : [contentId, ...prev.likedContentIds],
+          };
+        });
+        return liked;
+      },
+
+      createIpListing: ({ ipId, qty, price }) => {
+        if (!state.walletConnected) {
+          return { ok: false, reason: "Connect your wallet before listing shares." };
+        }
+        const available = state.ipHoldings[ipId] ?? 0;
+        if (qty < 1 || price <= 0)
+          return { ok: false, reason: "Enter a valid quantity and price." };
+        if (available < qty) return { ok: false, reason: "You do not own enough shares." };
+
+        setState((prev) => ({
+          ...prev,
+          marketListings: [
+            {
+              id: `${ipId}-u-${Date.now()}`,
+              ipId,
+              seller: "You",
+              avatar: "YO",
+              qty,
+              price,
+              listedAgo: "just now",
+            },
+            ...prev.marketListings,
+          ],
+          ipHoldings: {
+            ...prev.ipHoldings,
+            [ipId]: (prev.ipHoldings[ipId] ?? 0) - qty,
+          },
+        }));
+
+        return { ok: true };
+      },
+
+      cancelIpListing: (listingId: string) => {
+        const listing = state.marketListings.find((item) => item.id === listingId);
+        if (!listing) return { ok: false };
+
+        setState((prev) => ({
+          ...prev,
+          marketListings: prev.marketListings.filter((item) => item.id !== listingId),
+          ipHoldings:
+            listing.seller === "You"
+              ? {
+                  ...prev.ipHoldings,
+                  [listing.ipId]: (prev.ipHoldings[listing.ipId] ?? 0) + listing.qty,
+                }
+              : prev.ipHoldings,
+        }));
+
+        return { ok: true };
+      },
+    }),
+    [apiIPs, state, user],
+  );
+
+  return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
+}
