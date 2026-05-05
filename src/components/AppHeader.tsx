@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Search, Bell } from "lucide-react";
 import { CREATORS } from "@/lib/data";
 import { useAppState } from "@/lib/use-app-state";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -114,6 +115,8 @@ export function AppHeader({ title = "Orisale", subtitle }: AppHeaderProps) {
 
               <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-warning" />
             </button>
+
+            <ProfileMenu />
           </div>
         </div>
       </header>

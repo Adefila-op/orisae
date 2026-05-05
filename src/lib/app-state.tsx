@@ -359,9 +359,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }));
       },
 
+      getUserTransactionVolume: async () => {
+        if (!user) return 0;
+        try {
+          // In demo mode, return 0 (will show in UI)
+          if (user.id.startsWith("local-")) return 0;
+          
+          // For API mode, this would be fetched from backend
+          // For now, calculate from transactions if available
+          const transactions = state.contentOrders || [];
+          const totalVolume = transactions.reduce(
+            (sum, tx) => sum + (tx.amount || 0),
+            0
+          );
+          return totalVolume;
+        } catch (error) {
+          console.error("Failed to get transaction volume:", error);
+          return 0;
+        }
+      },
+
       enableCreatorProfile: async () => {
         try {
           if (!user) throw new Error("Not signed in");
+
+          // Check transaction volume
+          const volume = await value.getUserTransactionVolume();
+          const minVolumeRequired = 10000; // $100 in cents
+          
+          if (volume < minVolumeRequired) {
+            return {
+              ok: false as const,
+              reason: `You need $100 trading volume to create IP assets. Current: $${(volume / 100).toFixed(2)}`,
+              currentVolume: volume,
+              requiredVolume: minVolumeRequired,
+            };
+          }
 
           let updatedUser: User;
           try {
@@ -393,7 +426,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           return { ok: true as const };
         } catch (error) {
           console.error("Creator profile activation failed:", error);
-          return { ok: false as const, reason: (error as Error).message };
+          return { ok: false as const, reason: (error as Error).message, currentVolume: 0, requiredVolume: 10000 };
         }
       },
 

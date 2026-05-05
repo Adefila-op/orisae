@@ -1,5 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Compass, Sparkles, Wallet, Plus } from "lucide-react";
+import { useAppState } from "@/lib/use-app-state";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -11,6 +12,7 @@ const items = [
 
 export function BottomNav() {
   const { pathname } = useLocation();
+  const { creatorProfileActive } = useAppState();
 
   return (
     <nav
@@ -25,9 +27,23 @@ export function BottomNav() {
         <Link
           to="/upload"
           aria-label="Upload"
-          className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-ink text-ink-foreground shadow-ink transition-transform hover:scale-105 active:scale-95"
+          className={cn(
+            "-mt-7 flex h-14 w-14 items-center justify-center rounded-full shadow-ink transition-transform hover:scale-105 active:scale-95",
+            creatorProfileActive
+              ? "bg-ink text-ink-foreground"
+              : "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+          )}
+          onClick={(e) => {
+            if (!creatorProfileActive) {
+              e.preventDefault();
+            }
+          }}
+          title={creatorProfileActive ? "Create new IP" : "Reach $100 trading volume to unlock"}
         >
           <Plus className="h-6 w-6" strokeWidth={2.5} />
+          {creatorProfileActive && (
+            <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-success animate-pulse" />
+          )}
         </Link>
 
         {items.slice(2).map((item) => (

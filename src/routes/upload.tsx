@@ -56,6 +56,7 @@ function UploadPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [creatorVolume, setCreatorVolume] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fileAccept = useMemo(
@@ -202,7 +203,11 @@ function UploadPage() {
               <AccessStep
                 done={creatorProfileActive}
                 title="3. Activate creator profile"
-                body="Only activated creator profiles can publish products and launch IP."
+                body={
+                  creatorVolume > 0 && creatorVolume < 10000
+                    ? `You need $100 trading volume to create IP. Current: $${(creatorVolume / 100).toFixed(2)}. Buy some IP tokens to unlock!`
+                    : "Only activated creator profiles can publish products and launch IP."
+                }
                 actionLabel={creatorProfileActive ? "Creator profile active" : "Activate profile"}
                 isLoading={isActivating}
                 onAction={async () => {
@@ -216,7 +221,11 @@ function UploadPage() {
                     if (result.ok) {
                       toast.success("Creator profile activated");
                     } else {
-                      toast.error(result.reason || "Failed to activate creator profile");
+                      setCreatorVolume(result.currentVolume || 0);
+                      const shortBy = (result.requiredVolume || 10000) - (result.currentVolume || 0);
+                      toast.error(
+                        `Need $100 trading volume. Current: $${((result.currentVolume || 0) / 100).toFixed(2)}. Buy $${(shortBy / 100).toFixed(2)} more in IP tokens!`
+                      );
                     }
                   } catch (error) {
                     toast.error((error as Error).message || "Failed to activate creator profile");
