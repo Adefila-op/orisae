@@ -10,16 +10,28 @@ const nextConfig = {
     serverComponentsExternalPackages: ['pg', 'redis', 'bullmq'],
   },
   rewrites: async () => {
-    return {
-      beforeFiles: [
+    const localApiOrigin = process.env.LOCAL_API_ORIGIN || 'http://localhost:3001'
+    const remoteApiOrigin = process.env.API_ORIGIN || process.env.NEXT_PUBLIC_API_ORIGIN
+
+    if (process.env.NODE_ENV !== 'production') {
+      return [
         {
           source: '/api/:path*',
-          destination: process.env.NODE_ENV === 'production' 
-            ? '/api/:path*' 
-            : 'http://localhost:3001/api/:path*',
+          destination: `${localApiOrigin}/api/:path*`,
         },
-      ],
+      ]
     }
+
+    if (remoteApiOrigin) {
+      return [
+        {
+          source: '/api/:path*',
+          destination: `${remoteApiOrigin.replace(/\/$/, '')}/api/:path*`,
+        },
+      ]
+    }
+
+    return []
   },
 }
 

@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { ContentType } from "@/lib/data";
 import { useAppState } from "@/lib/use-app-state";
+import { CreatorRegistrationForm, type CreatorDetails } from "@/components/CreatorRegistrationForm";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
@@ -41,6 +42,7 @@ function UploadPage() {
     connectWallet,
     signIn,
     enableCreatorProfile,
+    getUserSalesCount,
     publishContent,
     createdContent,
     createdIpAssets,
@@ -57,6 +59,7 @@ function UploadPage() {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [creatorSales, setCreatorSales] = useState(0);
+  const [showCreatorForm, setShowCreatorForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fileAccept = useMemo(
@@ -217,14 +220,15 @@ function UploadPage() {
                   }
                   setIsActivating(true);
                   try {
-                    const result = await enableCreatorProfile();
-                    if (result.ok) {
-                      toast.success("Creator profile activated");
+                    const salesCount = await getUserSalesCount();
+                    if (salesCount >= 1) {
+                      setCreatorSales(salesCount);
+                      setShowCreatorForm(true);
                     } else {
-                      setCreatorSales(result.currentVolume || 0);
-                      const shortBy = (result.requiredVolume || 1) - (result.currentVolume || 0);
+                      setCreatorSales(salesCount);
+                      const shortBy = 1 - salesCount;
                       toast.error(
-                        `You need at least 1 sale of a digital product to create IP. Current: ${result.currentVolume} sale(s). ${shortBy > 0 ? `Make ${shortBy} more sale(s) to unlock!` : 'Refresh and try again!'}`
+                        `You need at least 1 sale of a digital product to create IP. Current: ${salesCount} sale(s). ${shortBy > 0 ? `Make ${shortBy} more sale(s) to unlock!` : "Refresh and try again!"}`
                       );
                     }
                   } catch (error) {
@@ -235,6 +239,31 @@ function UploadPage() {
                 }}
               />
             </div>
+
+            {showCreatorForm && !creatorProfileActive ? (
+              <div className="mt-5 rounded-2xl border border-border bg-background p-4">
+                <CreatorRegistrationForm
+                  mode="inline"
+                  isLoading={isActivating}
+                  submitLabel="Create creator profile"
+                  onSubmit={async (details: CreatorDetails) => {
+                    setIsActivating(true);
+                    try {
+                      const result = await enableCreatorProfile(details);
+                      if (result.ok) {
+                        setShowCreatorForm(false);
+                        toast.success("Creator profile created");
+                      } else {
+                        setCreatorSales(result.currentVolume || 0);
+                        toast.error(result.reason || "Failed to create creator profile");
+                      }
+                    } finally {
+                      setIsActivating(false);
+                    }
+                  }}
+                />
+              </div>
+            ) : null}
 
             <button
               type="button"

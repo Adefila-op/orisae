@@ -45,7 +45,9 @@ export type AppStateContextValue = AppStateSnapshot & {
   ipCatalog: IpAsset[];
   signIn: () => Promise<{ ok: boolean; reason?: string }>;
   signOut: () => void;
-  enableCreatorProfile: () => Promise<{ ok: boolean; reason?: string }>;
+  enableCreatorProfile: (
+    details?: CreatorDetails,
+  ) => Promise<{ ok: boolean; reason?: string; currentVolume?: number; requiredVolume?: number }>;
   connectWallet: () => Promise<{ ok: boolean; reason?: string }>;
   disconnectWallet: () => void;
   setPushEnabled: (enabled: boolean) => void;

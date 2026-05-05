@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 interface CreatorRegistrationFormProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   onSubmit: (details: CreatorDetails) => Promise<void>;
   isLoading?: boolean;
+  mode?: "dialog" | "inline";
+  submitLabel?: string;
 }
 
 export interface CreatorDetails {
@@ -17,10 +19,12 @@ export interface CreatorDetails {
 }
 
 export function CreatorRegistrationForm({
-  isOpen,
+  isOpen = true,
   onClose,
   onSubmit,
   isLoading = false,
+  mode = "dialog",
+  submitLabel = "Become a Creator",
 }: CreatorRegistrationFormProps) {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
@@ -71,6 +75,111 @@ export function CreatorRegistrationForm({
     }
   };
 
+  const form = (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-foreground">
+          Creator Name *
+        </label>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="e.g., Luna Designs, Alex Studio"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+          disabled={isSubmitting || isLoading}
+          maxLength={50}
+        />
+        <p className="text-xs text-muted-foreground">
+          {username.length}/50 characters
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-foreground">
+          Bio
+        </label>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Tell collectors about your work, style, and vision..."
+          className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+          rows={4}
+          disabled={isSubmitting || isLoading}
+          maxLength={500}
+        />
+        <p className="text-xs text-muted-foreground">
+          {bio.length}/500 characters
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-foreground">
+          Profile Picture URL
+        </label>
+        <input
+          type="url"
+          value={profilePictureUrl}
+          onChange={(e) => setProfilePictureUrl(e.target.value)}
+          placeholder="https://example.com/profile.jpg"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+          disabled={isSubmitting || isLoading}
+        />
+        <p className="text-xs text-muted-foreground">
+          Leave blank to use default avatar
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-2">
+        {mode === "dialog" && onClose ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting || isLoading}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+        ) : null}
+        <Button
+          type="submit"
+          disabled={isSubmitting || isLoading || !username.trim()}
+          className="flex-1"
+        >
+          {isSubmitting || isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating Profile...
+            </>
+          ) : (
+            submitLabel
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+
+  if (mode === "inline") {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold">Create your creator profile</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Fill this out once and we&apos;ll activate your creator profile automatically.
+          </p>
+        </div>
+        {form}
+      </div>
+    );
+  }
+
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="max-w-md">
@@ -80,98 +189,7 @@ export function CreatorRegistrationForm({
             Tell us about yourself. You can update these details anytime.
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Creator Name */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground">
-              Creator Name *
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g., Luna Designs, Alex Studio"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-              disabled={isSubmitting || isLoading}
-              maxLength={50}
-            />
-            <p className="text-xs text-muted-foreground">
-              {username.length}/50 characters
-            </p>
-          </div>
-
-          {/* Bio */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground">
-              Bio
-            </label>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell collectors about your work, style, and vision..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none"
-              rows={4}
-              disabled={isSubmitting || isLoading}
-              maxLength={500}
-            />
-            <p className="text-xs text-muted-foreground">
-              {bio.length}/500 characters
-            </p>
-          </div>
-
-          {/* Profile Picture URL */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground">
-              Profile Picture URL
-            </label>
-            <input
-              type="url"
-              value={profilePictureUrl}
-              onChange={(e) => setProfilePictureUrl(e.target.value)}
-              placeholder="https://example.com/profile.jpg"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-              disabled={isSubmitting || isLoading}
-            />
-            <p className="text-xs text-muted-foreground">
-              Leave blank to use default avatar
-            </p>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          {/* Buttons */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting || isLoading}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || isLoading || !username.trim()}
-              className="flex-1"
-            >
-              {isSubmitting || isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Profile...
-                </>
-              ) : (
-                "Become a Creator"
-              )}
-            </Button>
-          </div>
-        </form>
+        {form}
       </AlertDialogContent>
     </AlertDialog>
   );

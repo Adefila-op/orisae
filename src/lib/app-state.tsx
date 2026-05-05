@@ -349,7 +349,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
       },
 
-      enableCreatorProfile: async () => {
+      enableCreatorProfile: async (details?: CreatorDetails) => {
         try {
           if (!user) throw new Error("Not signed in");
 
@@ -363,6 +363,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               currentVolume: salesCount,
               requiredVolume: 1,
             };
+          }
+
+          if (details) {
+            return await value._completeCreatorRegistration(details);
           }
 
           // Show registration form and wait for submission
@@ -778,6 +782,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           }
         }}
         onSubmit={(details) => value._completeCreatorRegistration(details)}
+        mode="dialog"
       />
       {children}
     </AppStateContext.Provider>

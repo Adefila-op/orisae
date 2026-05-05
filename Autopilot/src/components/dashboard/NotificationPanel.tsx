@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { Bell, X, Check, Clock } from 'lucide-react'
 import axios from 'axios'
+import { getAuthHeaderValue } from '@/lib/api-client'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 interface Notification {
   id: string
@@ -14,12 +15,6 @@ interface Notification {
   read: boolean
   created_at: string
   data: Record<string, any>
-}
-
-function getAuthHeader(): string | undefined {
-  const token = localStorage.getItem('auth_token') || ''
-  if (!token) return undefined
-  return token.startsWith('Bearer ') ? token : `Bearer ${token}`
 }
 
 export function NotificationPanel() {
@@ -34,7 +29,7 @@ export function NotificationPanel() {
       setIsLoading(true)
       const response = await axios.get(`${API_BASE_URL}/notifications`, {
         headers: {
-          Authorization: getAuthHeader(),
+          Authorization: getAuthHeaderValue(),
         },
       })
 
@@ -66,7 +61,7 @@ export function NotificationPanel() {
         {},
         {
           headers: {
-            Authorization: getAuthHeader(),
+            Authorization: getAuthHeaderValue(),
           },
         }
       )
@@ -87,7 +82,7 @@ export function NotificationPanel() {
     try {
       await axios.delete(`${API_BASE_URL}/notifications/${notificationId}`, {
         headers: {
-          Authorization: getAuthHeader(),
+          Authorization: getAuthHeaderValue(),
         },
       })
 

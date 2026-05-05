@@ -30,7 +30,11 @@ export class LinkService {
   ): Promise<SmartLink> {
     const code = this.generateCode()
     const id = uuidv4()
-    const short_url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/l/${code}`
+    const appUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      'http://localhost:3000'
+    const short_url = `${appUrl}/l/${code}`
     
     try {
       const result = await db.query(

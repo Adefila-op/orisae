@@ -1,6 +1,29 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
+
+export function getAuthHeaderValue() {
+  if (typeof window === 'undefined') {
+    return undefined
+  }
+
+  let token = localStorage.getItem('auth_token')
+
+  if (!token && process.env.NODE_ENV === 'development') {
+    try {
+      const { getDemoToken } = require('./demo-auth')
+      token = getDemoToken()
+    } catch {
+      return undefined
+    }
+  }
+
+  if (!token) {
+    return undefined
+  }
+
+  return token.startsWith('Bearer ') ? token : `Bearer ${token}`
+}
 
 class ApiClient {
   private client: AxiosInstance
@@ -17,18 +40,8 @@ class ApiClient {
     // Add token to requests (use demo token in dev mode)
     this.client.interceptors.request.use((config) => {
       if (typeof window !== 'undefined') {
-        let token = localStorage.getItem('auth_token')
-        
-        // Use demo token in development if no real token exists
-        if (!token && process.env.NODE_ENV === 'development') {
-          try {
-            const { getDemoToken } = require('./demo-auth')
-            token = getDemoToken()
-          } catch (e) {
-            // Fall through if demo auth unavailable
-          }
-        }
-        
+        const token = getAuthHeaderValue()
+
         if (token) {
           config.headers.Authorization = token
         }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { TrendingUp, Loader } from 'lucide-react'
 import axios from 'axios'
+import { getAuthHeaderValue } from '@/lib/api-client'
 
 interface PlatformStat {
   platform: string
@@ -27,7 +28,11 @@ export default function PlatformStats() {
   async function fetchPlatformStats() {
     try {
       setLoading(true)
-      const response = await axios.get('/api/links/stats/by-platform')
+      const response = await axios.get('/api/links/stats/by-platform', {
+        headers: {
+          Authorization: getAuthHeaderValue(),
+        },
+      })
       setStats(response.data.stats)
     } catch (error) {
       console.error('Error fetching platform stats:', error)

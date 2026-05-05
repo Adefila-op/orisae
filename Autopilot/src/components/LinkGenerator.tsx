@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Copy, Check, Zap, AlertCircle, Loader } from 'lucide-react'
 import axios from 'axios'
+import { getAuthHeaderValue } from '@/lib/api-client'
 import { detectPlatform, getPlatformInfo, isValidUrl } from '@/lib/platform-detector'
 
 interface GeneratedLink {
@@ -80,6 +81,10 @@ export default function LinkGenerator() {
         product_url: productUrl,
         offer_type: offerType,
         offer_value: offerValue,
+      }, {
+        headers: {
+          Authorization: getAuthHeaderValue(),
+        },
       })
 
       setGeneratedLink(response.data.link)

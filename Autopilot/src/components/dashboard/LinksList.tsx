@@ -24,6 +24,14 @@ interface LinksListProps {
 export default function LinksList({ links, onRefresh }: LinksListProps) {
   const [copied, setCopied] = useState<string | null>(null)
 
+  const getBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+      return window.location.origin
+    }
+
+    return process.env.NEXT_PUBLIC_SITE_URL || ''
+  }
+
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
     setCopied(id)
@@ -83,7 +91,7 @@ export default function LinksList({ links, onRefresh }: LinksListProps) {
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        `${process.env.NEXT_PUBLIC_API_URL}/l/${link.code}`,
+                        `${getBaseUrl()}/l/${link.code}`,
                         link.id
                       )
                     }
@@ -108,7 +116,7 @@ export default function LinksList({ links, onRefresh }: LinksListProps) {
               <td className="py-3 px-4">
                 <div className="flex justify-center gap-2">
                   <button 
-                    onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/analytics/link/${link.id}`, '_blank')}
+                    onClick={() => window.open(`/dashboard/analytics?link=${link.id}`, '_blank')}
                     className="p-1 hover:bg-slate-700 rounded transition"
                     title="View analytics"
                   >
