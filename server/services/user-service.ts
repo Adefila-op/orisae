@@ -2,7 +2,7 @@
  * User Service - Manages user accounts and wallet connections
  */
 
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { DatabaseClient, schema } from "../db/client";
 import type { User } from "../db/types";
 import { generateId } from "../utils/id-generator";
@@ -166,5 +166,26 @@ export class UserService {
    */
   async withdrawCash(userId: string, amount: number): Promise<User> {
     return this.updateCashBalance(userId, amount, false);
+  }
+
+  /**
+   * Get user's total transaction volume (buy + sell amounts in USD cents)
+   */
+  async getUserTransactionVolume(userId: string): Promise<number> {
+    const transactions = await this.db
+      .select({
+        amount_value: schema.transactions.amount_value,
+      })
+      .from(schema.transactions)
+      .where(
+        or(
+          eq(schema.transactions.buyer_id, userId),
+          eq(schema.transactions.seller_id, userId)
+        )
+      );
+
+    // Sum all transaction volumes
+    const totalVolume = transactions.reduce((sum, tx) => sum + (tx.amount_value || 0), 0);
+    return totalVolume;
   }
 }
