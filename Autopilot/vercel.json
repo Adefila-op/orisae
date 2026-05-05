@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "public": false,
+  "env": [
+    {
+      "key": "NEXT_PUBLIC_API_URL",
+      "description": "API URL for frontend requests",
+      "value": "https://autopilot-api.vercel.app/api"
+    },
+    {
+      "key": "DATABASE_URL",
+      "description": "PostgreSQL database connection string",
+      "value": ""
+    },
+    {
+      "key": "REDIS_HOST",
+      "description": "Redis server host",
+      "value": "localhost"
+    },
+    {
+      "key": "REDIS_PORT",
+      "description": "Redis server port",
+      "value": "6379"
+    },
+    {
+      "key": "RESEND_API_KEY",
+      "description": "Resend email API key for sending emails",
+      "value": ""
+    },
+    {
+      "key": "JWT_SECRET",
+      "description": "Secret key for JWT token signing",
+      "value": ""
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://localhost:3001/api/:path*"
+    }
+  ],
+  "regions": ["sfo1"]
+}
