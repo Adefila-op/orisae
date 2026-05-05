@@ -160,21 +160,10 @@ export default function KanbanBoard() {
     </div>
   )
 
-  if (loading && links.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <RefreshCw size={32} className="mx-auto mb-3 text-white/30 animate-spin" />
-          <p className="text-white/50">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-gradient-to-br from-black via-slate-900 to-black">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-gradient-to-b from-black to-transparent px-6 py-4 border-b border-white/5">
+      <div className="sticky top-0 z-20 px-6 py-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white">Conversion Pipeline</h2>
@@ -191,10 +180,10 @@ export default function KanbanBoard() {
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-6 p-6 min-w-max">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+        <div className="flex gap-6 p-6 min-w-max h-full">
           {/* Platform Tracked */}
-          <div className="w-96">
+          <div className="w-96 flex-shrink-0">
             <Lane
               title="Platform Tracked"
               items={platformTracked}
@@ -205,7 +194,7 @@ export default function KanbanBoard() {
           </div>
 
           {/* User Behavioral Data */}
-          <div className="w-96">
+          <div className="w-96 flex-shrink-0">
             <Lane
               title="User Behavioral Data"
               items={behavioral}
@@ -216,15 +205,15 @@ export default function KanbanBoard() {
           </div>
 
           {/* Result - Converted */}
-          <div className="w-96">
-            <div className="flex flex-col gap-4 min-h-[600px]">
-              <div className="sticky top-0 z-10 bg-black/30 backdrop-blur pb-4">
+          <div className="w-96 flex-shrink-0">
+            <div className="flex flex-col gap-4 h-full">
+              <div className="pb-4">
                 <h3 className="font-semibold text-white mb-1">Result</h3>
                 <p className="text-xs text-white/40">Final conversion outcomes</p>
               </div>
 
               {/* Converted Sub-lane */}
-              <div className="flex-1 min-h-[280px]">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 rounded-lg bg-emerald-500/20">
                     <CheckCircle size={16} className="text-emerald-400" />
@@ -246,7 +235,7 @@ export default function KanbanBoard() {
               </div>
 
               {/* Ignored Sub-lane */}
-              <div className="flex-1 min-h-[280px]">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 rounded-lg bg-gray-500/20">
                     <AlertCircle size={16} className="text-gray-400" />
@@ -266,7 +255,7 @@ export default function KanbanBoard() {
               </div>
 
               {/* Blocked Sub-lane */}
-              <div className="flex-1 min-h-[280px]">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 rounded-lg bg-red-500/20">
                     <XCircle size={16} className="text-red-400" />

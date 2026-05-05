@@ -31,9 +31,9 @@ export default function Dashboard() {
       <Sidebar isOpen={sidebarOpen} isDesktop={isDesktop} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-black via-slate-900 to-black">
         {/* Top Navigation */}
-        <header className="border-b border-slate-700 bg-black/50 backdrop-blur-lg sticky top-0 z-40">
+        <header className="border-b border-white/10 bg-black/40 backdrop-blur-sm sticky top-0 z-40">
           <div className="px-6 py-4 flex justify-between items-center">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -52,7 +52,7 @@ export default function Dashboard() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-hidden">
           <KanbanBoard />
         </main>
       </div>
