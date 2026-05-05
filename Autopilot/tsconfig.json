@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/api/*": ["./api/*"],
+      "@/db/*": ["./db/*"],
+      "@/services/*": ["./api/services/*"],
+      "@/types/*": ["./types/*"]
+    }
+  },
+  "include": ["src", "api", "db", "types", "next-env.d.ts"],
+  "exclude": ["node_modules", ".next"]
+}
