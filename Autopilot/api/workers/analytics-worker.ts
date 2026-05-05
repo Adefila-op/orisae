@@ -42,7 +42,7 @@ async function aggregateCreatorAnalytics(creator_id: string, date: string): Prom
         [link.id, date]
       )
 
-      const clicks = parseInt(clicksResult.rows[0].count)
+      const clicks = parseInt(clicksResult.rows[0].count, 10)
       totalClicks += clicks
 
       // Get conversions
@@ -54,8 +54,8 @@ async function aggregateCreatorAnalytics(creator_id: string, date: string): Prom
         [link.id, date]
       )
 
-      const conversions = parseInt(conversionsResult.rows[0].count)
-      const value = parseFloat(conversionsResult.rows[0].total || 0)
+      const conversions = parseInt(conversionsResult.rows[0].count, 10)
+      const value = parseFloat(String(conversionsResult.rows[0].total || 0))
 
       totalConversions += conversions
       totalValue += value

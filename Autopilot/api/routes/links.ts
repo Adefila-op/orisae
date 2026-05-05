@@ -4,11 +4,10 @@ import linkService from '../services/link-service'
 
 const router: Router = express.Router()
 
-// Create a new smart link
-router.post('/', async (req: any, res) => {
+router.post('/', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { target_url, product_id, offer_type = 'recovery', offer_value = 10 } = req.body
-    const creator_id = req.user?.id || process.env.DEMO_USER_ID || '550e8400-e29b-41d4-a716-446655440000'
+    const creator_id = req.user!.id
 
     if (!target_url) {
       return res.status(400).json({ error: 'target_url is required' })
@@ -29,11 +28,9 @@ router.post('/', async (req: any, res) => {
   }
 })
 
-// Get all links for creator
-router.get('/', async (req: any, res) => {
+router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const creator_id = req.user?.id || process.env.DEMO_USER_ID || '550e8400-e29b-41d4-a716-446655440000'
-    const links = await linkService.getCreatorLinks(creator_id)
+    const links = await linkService.getCreatorLinks(req.user!.id)
     res.json(links)
   } catch (error: any) {
     console.error('Error fetching links:', error.message)
@@ -41,7 +38,6 @@ router.get('/', async (req: any, res) => {
   }
 })
 
-// Get specific link by code
 router.get('/code/:code', optionalAuth, async (req: AuthRequest, res) => {
   try {
     const { code } = req.params
@@ -51,9 +47,7 @@ router.get('/code/:code', optionalAuth, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Link not found' })
     }
 
-    // Check if user owns this link
-    if (req.user && req.user.id !== link.creator_id) {
-      // Return limited info for public access
+    if (!req.user || req.user.id !== link.creator_id) {
       return res.json({
         code: link.code,
         short_url: link.short_url,
@@ -67,20 +61,18 @@ router.get('/code/:code', optionalAuth, async (req: AuthRequest, res) => {
   }
 })
 
-// Toggle link enabled/disabled
-router.patch('/:link_id/toggle', async (req: any, res) => {
+router.patch('/:link_id/toggle', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { link_id } = req.params
     const { enabled } = req.body
-    const creator_id = req.user?.id || process.env.DEMO_USER_ID || '550e8400-e29b-41d4-a716-446655440000'
+    const creator_id = req.user!.id
 
-    // Verify ownership (or skip in dev mode)
-    const existingLink = await linkService.getLink(link_id)
+    const existingLink = await linkService.getLinkById(link_id)
     if (!existingLink) {
       return res.status(404).json({ error: 'Link not found' })
     }
-    
-    if (existingLink.creator_id !== creator_id && process.env.NODE_ENV === 'production') {
+
+    if (existingLink.creator_id !== creator_id) {
       return res.status(403).json({ error: 'Unauthorized' })
     }
 
@@ -92,12 +84,10 @@ router.patch('/:link_id/toggle', async (req: any, res) => {
   }
 })
 
-// Delete link
-router.delete('/:link_id', async (req: any, res) => {
+router.delete('/:link_id', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { link_id } = req.params
-    const creator_id = req.user?.id || process.env.DEMO_USER_ID || '550e8400-e29b-41d4-a716-446655440000'
-    const deleted = await linkService.deleteLink(link_id, creator_id)
+    const deleted = await linkService.deleteLink(link_id, req.user!.id)
 
     if (!deleted) {
       return res.status(404).json({ error: 'Link not found or unauthorized' })

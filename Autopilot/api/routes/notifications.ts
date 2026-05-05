@@ -8,12 +8,12 @@ const router: Router = express.Router()
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
     const limit = parseInt((req.query.limit as string) || '20', 10)
-    const notifications = await notificationService.getUserNotifications(
-      req.user!.id,
-      limit
-    )
+    const [notifications, unreadCount] = await Promise.all([
+      notificationService.getUserNotifications(req.user!.id, limit),
+      notificationService.getUnreadCount(req.user!.id),
+    ])
 
-    res.json(notifications)
+    res.json({ notifications, unreadCount })
   } catch (error: any) {
     res.status(500).json({ error: error.message })
   }
@@ -34,7 +34,7 @@ router.patch('/:notification_id/read', requireAuth, async (req: AuthRequest, res
   try {
     const { notification_id } = req.params
 
-    const notification = await notificationService.markAsRead(notification_id)
+    const notification = await notificationService.markAsRead(notification_id, req.user!.id)
 
     if (!notification) {
       return res.status(404).json({ error: 'Notification not found' })
@@ -50,6 +50,21 @@ router.patch('/:notification_id/read', requireAuth, async (req: AuthRequest, res
 router.patch('/all/read', requireAuth, async (req: AuthRequest, res) => {
   try {
     await notificationService.markAllAsRead(req.user!.id)
+    res.json({ success: true })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.delete('/:notification_id', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { notification_id } = req.params
+    const deleted = await notificationService.deleteNotification(notification_id, req.user!.id)
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Notification not found' })
+    }
+
     res.json({ success: true })
   } catch (error: any) {
     res.status(500).json({ error: error.message })

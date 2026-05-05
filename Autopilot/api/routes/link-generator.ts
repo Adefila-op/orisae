@@ -3,13 +3,13 @@
  * Handles creating smart links from product URLs with platform detection
  */
 
-import { Router, Request, Response } from 'express'
-import { LinkService } from '../services/link-service'
+import { Router, Response } from 'express'
+import linkService from '../services/link-service'
 import { detectPlatform, getPlatformInfo, isValidUrl } from '../utils/platform-detector'
-import { authMiddleware } from '../middleware/auth'
+import { requireAuth, AuthRequest } from '../middleware/auth'
+import { db } from '../server'
 
 const router = Router()
-const linkService = new LinkService()
 
 /**
  * POST /api/links/generate
@@ -22,7 +22,7 @@ const linkService = new LinkService()
  *   "offer_value": 10
  * }
  */
-router.post('/generate', authMiddleware, async (req: Request, res: Response) => {
+router.post('/generate', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { product_url, offer_type = 'recovery', offer_value = 10 } = req.body
     const creator_id = (req as any).user?.id
@@ -77,7 +77,7 @@ router.post('/generate', authMiddleware, async (req: Request, res: Response) => 
  * GET /api/links/platforms
  * Get list of supported platforms
  */
-router.get('/platforms', (_req: Request, res: Response) => {
+router.get('/platforms', (_req, res: Response) => {
   const platforms = [
     { value: 'gumroad', label: 'Gumroad', icon: '📦' },
     { value: 'stripe', label: 'Stripe', icon: '💳' },
@@ -100,16 +100,16 @@ router.get('/platforms', (_req: Request, res: Response) => {
  * GET /api/links/by-platform/:platform
  * Get all links for a specific platform
  */
-router.get('/by-platform/:platform', authMiddleware, async (req: Request, res: Response) => {
+router.get('/by-platform/:platform', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const creator_id = (req as any).user?.id
+    const creator_id = req.user?.id
     const { platform } = req.params
 
     if (!creator_id) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    const links = await (req as any).db.query(
+    const links = await db.query(
       'SELECT * FROM smart_links WHERE creator_id = $1 AND platform = $2 ORDER BY created_at DESC',
       [creator_id, platform]
     )
@@ -133,15 +133,15 @@ router.get('/by-platform/:platform', authMiddleware, async (req: Request, res: R
  * GET /api/links/stats/by-platform
  * Get aggregated stats by platform
  */
-router.get('/stats/by-platform', authMiddleware, async (req: Request, res: Response) => {
+router.get('/stats/by-platform', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const creator_id = (req as any).user?.id
+    const creator_id = req.user?.id
 
     if (!creator_id) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    const stats = await (req as any).db.query(
+    const stats = await db.query(
       `SELECT 
         platform,
         COUNT(*) as link_count,

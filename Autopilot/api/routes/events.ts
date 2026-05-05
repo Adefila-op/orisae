@@ -2,10 +2,10 @@ import express, { Router } from 'express'
 import { db } from '../server'
 import linkService from '../services/link-service'
 import { v4 as uuidv4 } from 'uuid'
+import notificationService from '../services/notification-service'
 
 const router: Router = express.Router()
 
-// Track click event - Safe version that respects bot detection and privacy
 router.post('/click', async (req, res) => {
   try {
     const {
@@ -26,22 +26,16 @@ router.post('/click', async (req, res) => {
       return res.status(400).json({ error: 'link_code is required' })
     }
 
-    // Check for bot-like behavior in user agent
-    const userAgent = req.get('user-agent') || ''
     const clientType = req.get('X-Client-Type') || ''
-    
-    // Only warn (don't block) but do log suspicious requests
     if (clientType !== 'web') {
-      console.warn('⚠️ Suspicious click from non-web client:', link_code)
+      console.warn('Suspicious click from non-web client:', link_code)
     }
 
-    // Get link
     const link = await linkService.getLink(link_code)
     if (!link) {
       return res.status(404).json({ error: 'Link not found' })
     }
 
-    // Record event with safety info
     await db.query(
       `INSERT INTO user_events (
         id, link_id, user_address, event_type, browser_info, device_type,
@@ -70,14 +64,10 @@ router.post('/click', async (req, res) => {
       ]
     )
 
-    // Update link stats - only count legitimate clicks
     if (is_legitimate !== false) {
       await linkService.updateLinkStats(link.id, 'click')
     }
 
-    console.log('✅ Click tracked (legitimate):', link_code)
-
-    // Redirect to target URL
     res.json({
       redirect: link.target_url,
       link_id: link.id,
@@ -89,7 +79,6 @@ router.post('/click', async (req, res) => {
   }
 })
 
-// Track conversion event - CRITICAL: Final purchase event
 router.post('/conversion', async (req, res) => {
   try {
     const { link_code, user_address, amount, is_legitimate, conversion_timestamp, order_info } = req.body
@@ -102,36 +91,24 @@ router.post('/conversion', async (req, res) => {
       return res.status(400).json({ error: 'Invalid amount' })
     }
 
-    // Get link
     const link = await linkService.getLink(link_code)
     if (!link) {
       return res.status(404).json({ error: 'Link not found' })
     }
 
-    // Validate that conversion is from legitimate source
-    const isBot = req.get('X-Client-Type') !== 'web'
     const userAgent = req.get('user-agent') || ''
+    const clientType = req.get('X-Client-Type') || ''
     const botPatterns = ['bot', 'crawler', 'spider', 'curl', 'wget', 'python', 'headless']
-    const appearsToBeBot = botPatterns.some(p => userAgent.toLowerCase().includes(p))
+    const appearsToBeBot = botPatterns.some((pattern) => userAgent.toLowerCase().includes(pattern))
 
-    if (appearsToBeBot && !is_legitimate) {
+    if (clientType !== 'web' || appearsToBeBot || is_legitimate !== true) {
       return res.status(403).json({ error: 'Request rejected: bot-like behavior' })
     }
 
-    // Log conversion for audit trail
-    console.log('💰 CONVERSION EVENT:', {
-      link_code,
-      amount,
-      timestamp: conversion_timestamp || new Date().toISOString(),
-      user_agent: userAgent.substring(0, 50), // Log only first 50 chars
-    })
-
-    // Record conversion event with full details
-    const result = await db.query(
+    await db.query(
       `INSERT INTO user_events (
         id, link_id, user_address, event_type, intent_signals
-      ) VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`,
+      ) VALUES ($1, $2, $3, $4, $5)`,
       [
         uuidv4(),
         link.id,
@@ -147,31 +124,26 @@ router.post('/conversion', async (req, res) => {
       ]
     )
 
-    // Update link stats - THIS IS THE CRITICAL UPDATE
     await linkService.updateLinkStats(link.id, 'conversion', amount)
 
-    // Trigger purchase notification to creator
     try {
-      const { notificationService } = await import('../services/notification-service')
-      const notifResult = await notificationService.notifyConversion(
+      const notification = await notificationService.notifyConversion(
         link.creator_id,
         link_code,
         `Purchase via ${link.platform || 'Smart Link'}`,
         amount
       )
 
-      console.log('✅ CONVERSION RECORDED AND NOTIFIED:', link_code, `$${amount}`)
-
       res.json({
         success: true,
         message: 'Conversion recorded',
         link_id: link.id,
-        notification_id: notifResult?.id,
+        notification_id: notification.id,
         amount,
         timestamp: new Date().toISOString(),
       })
     } catch (notifError) {
-      console.error('⚠️ Notification failed but conversion was recorded:', notifError)
+      console.error('Notification failed but conversion was recorded:', notifError)
       res.json({
         success: true,
         message: 'Conversion recorded',
@@ -181,13 +153,12 @@ router.post('/conversion', async (req, res) => {
       })
     }
   } catch (error: any) {
-    console.error('❌ Error recording conversion:', error.message)
+    console.error('Error recording conversion:', error.message)
     res.status(500).json({ error: error.message })
   }
 })
 
-// Track abandoned cart
-router.post('/abandon', async (req, res) => {
+router.post('/abandoned', async (req, res) => {
   try {
     const { link_code, user_address } = req.body
 
@@ -213,7 +184,6 @@ router.post('/abandon', async (req, res) => {
   }
 })
 
-// Get events for a link
 router.get('/:link_code', async (req, res) => {
   try {
     const { link_code } = req.params
@@ -224,9 +194,9 @@ router.get('/:link_code', async (req, res) => {
     }
 
     const result = await db.query(
-      `SELECT * FROM user_events 
-       WHERE link_id = $1 
-       ORDER BY created_at DESC 
+      `SELECT * FROM user_events
+       WHERE link_id = $1
+       ORDER BY created_at DESC
        LIMIT 100`,
       [link.id]
     )

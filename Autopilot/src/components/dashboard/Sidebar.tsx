@@ -16,7 +16,17 @@ const menuItems = [
 ]
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const handleLogout = () => {\n    if (typeof window !== 'undefined') {\n      localStorage.removeItem('auth_token')\n      window.location.href = '/'\n    }\n  }
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token')
+      window.location.href = '/'
+    }
+  }
+
+  return (
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
         <div
           onClick={onClose}
           className="fixed inset-0 bg-black/50 backdrop-blur-sm md:hidden z-40"

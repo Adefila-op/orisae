@@ -19,9 +19,28 @@ interface DashboardStats {
   conversionRate: string
 }
 
+interface DashboardResponse {
+  summary: DashboardStats & {
+    totalValue: number | string
+  }
+  links: DashboardLink[]
+}
+
+interface DashboardLink {
+  id: string
+  code: string
+  target_url: string
+  offer_type: string
+  offer_value: number
+  click_count: number
+  conversion_count: number
+  total_value: number
+  enabled: boolean
+}
+
 export default function DashboardMain() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [links, setLinks] = useState([])
+  const [links, setLinks] = useState<DashboardLink[]>([])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -37,14 +56,14 @@ export default function DashboardMain() {
   async function fetchDashboardData() {
     try {
       setLoading(true)
-      const data = await analyticsAPI.dashboard()
+      const data = (await analyticsAPI.dashboard()) as DashboardResponse
       
       setStats({
         totalLinks: data.summary.totalLinks || 0,
         activeLinks: data.summary.activeLinks || 0,
         totalClicks: data.summary.totalClicks || 0,
         totalConversions: data.summary.totalConversions || 0,
-        totalValue: parseFloat(data.summary.totalValue) || 0,
+        totalValue: parseFloat(String(data.summary.totalValue)) || 0,
         conversionRate: data.summary.conversionRate || '0',
       })
       

@@ -73,6 +73,19 @@ export class LinkService {
     }
   }
 
+  async getLinkById(id: string): Promise<SmartLink | null> {
+    try {
+      const result = await db.query(
+        'SELECT * FROM smart_links WHERE id = $1',
+        [id]
+      )
+      return result.rows[0] || null
+    } catch (error) {
+      console.error('Error getting link by id:', error)
+      throw error
+    }
+  }
+
   async getCreatorLinks(creator_id: string): Promise<SmartLink[]> {
     const result = await db.query(
       `SELECT * FROM smart_links 

@@ -140,7 +140,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 })
 
 // Database connection check
-db.on('error', (err) => {
+db.on('error', (err: Error) => {
   console.error('❌ Database pool error:', err)
 })
 

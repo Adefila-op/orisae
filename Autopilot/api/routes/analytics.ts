@@ -4,28 +4,27 @@ import { db } from '../server'
 
 const router: Router = express.Router()
 
-// Get creator dashboard stats
-router.get('/dashboard', async (req: any, res) => {
+router.get('/dashboard', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const userId = req.user?.id || process.env.DEMO_USER_ID || '550e8400-e29b-41d4-a716-446655440000'
+    const userId = req.user!.id
 
-    // Get all links
     const linksResult = await db.query(
       'SELECT * FROM smart_links WHERE creator_id = $1',
       [userId]
     )
     const links = linksResult.rows
 
-    // Get aggregated stats
     const totalClicks = links.reduce((sum: number, l: any) => sum + (l.click_count || 0), 0)
     const totalConversions = links.reduce((sum: number, l: any) => sum + (l.conversion_count || 0), 0)
-    const totalValue = links.reduce((sum: number, l: any) => sum + parseFloat(l.total_value || 0), 0)
+    const totalValue = links.reduce(
+      (sum: number, l: any) => sum + parseFloat(String(l.total_value || 0)),
+      0
+    )
 
-    // Get daily analytics
     const analyticsResult = await db.query(
-      `SELECT * FROM daily_analytics 
-       WHERE creator_id = $1 
-       ORDER BY date DESC 
+      `SELECT * FROM daily_analytics
+       WHERE creator_id = $1
+       ORDER BY date DESC
        LIMIT 30`,
       [userId]
     )
@@ -48,13 +47,11 @@ router.get('/dashboard', async (req: any, res) => {
   }
 })
 
-// Get link analytics
-router.get('/link/:link_id', async (req: any, res) => {
+router.get('/link/:link_id', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { link_id } = req.params
-    const userId = req.user?.id || process.env.DEMO_USER_ID || '550e8400-e29b-41d4-a716-446655440000'
+    const userId = req.user!.id
 
-    // Get link
     const linkResult = await db.query(
       'SELECT * FROM smart_links WHERE id = $1',
       [link_id]
@@ -65,22 +62,33 @@ router.get('/link/:link_id', async (req: any, res) => {
     }
 
     const link = linkResult.rows[0]
+    if (link.creator_id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
 
-    // Get events
     const eventsResult = await db.query(
-      `SELECT * FROM user_events 
-       WHERE link_id = $1 
+      `SELECT * FROM user_events
+       WHERE link_id = $1
        ORDER BY created_at DESC`,
       [link.id]
     )
 
-    // Get intent scores
     const scoresResult = await db.query(
-      `SELECT * FROM intent_scores 
-       WHERE link_id = $1 
+      `SELECT * FROM intent_scores
+       WHERE link_id = $1
        ORDER BY created_at DESC`,
       [link.id]
     )
+
+    const avgIntentScore =
+      scoresResult.rows.length > 0
+        ? (
+            scoresResult.rows.reduce(
+              (sum: number, score: any) => sum + Number(score.purchase_probability || 0),
+              0
+            ) / scoresResult.rows.length
+          ).toFixed(2)
+        : '0'
 
     res.json({
       link,
@@ -94,18 +102,12 @@ router.get('/link/:link_id', async (req: any, res) => {
           link.click_count > 0
             ? ((link.conversion_count / link.click_count) * 100).toFixed(2)
             : '0',
-        avgIntentScore:
-          scoresResult.rows.length > 0
-                scoresResult.rows.reduce((sum: number, s: any) => sum + s.purchase_probability, 0) /
-                scoresResult.rows.length
-              ).toFixed(2)
-            : '0',
+        avgIntentScore,
       },
     })
   } catch (error: any) {
     console.error('Error fetching link analytics:', error.message)
     res.status(500).json({ error: error.message || 'Failed to fetch analytics' })
-    res.status(500).json({ error: error.message })
   }
 })
 

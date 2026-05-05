@@ -16,6 +16,12 @@ interface Notification {
   data: Record<string, any>
 }
 
+function getAuthHeader(): string | undefined {
+  const token = localStorage.getItem('auth_token') || ''
+  if (!token) return undefined
+  return token.startsWith('Bearer ') ? token : `Bearer ${token}`
+}
+
 export function NotificationPanel() {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -28,12 +34,12 @@ export function NotificationPanel() {
       setIsLoading(true)
       const response = await axios.get(`${API_BASE_URL}/notifications`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
+          Authorization: getAuthHeader(),
         },
       })
 
       setNotifications(response.data.notifications || [])
-      setUnreadCount(response.data.unread_count || 0)
+      setUnreadCount(response.data.unreadCount || 0)
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
       setNotifications([])
@@ -60,7 +66,7 @@ export function NotificationPanel() {
         {},
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
+            Authorization: getAuthHeader(),
           },
         }
       )
@@ -81,11 +87,15 @@ export function NotificationPanel() {
     try {
       await axios.delete(`${API_BASE_URL}/notifications/${notificationId}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
+          Authorization: getAuthHeader(),
         },
       })
 
+      const deleted = notifications.find((n) => n.id === notificationId)
       setNotifications(notifications.filter((n) => n.id !== notificationId))
+      if (deleted && !deleted.read) {
+        setUnreadCount(Math.max(0, unreadCount - 1))
+      }
     } catch (error) {
       console.error('Failed to delete notification:', error)
     }

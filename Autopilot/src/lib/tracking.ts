@@ -114,6 +114,8 @@ function getSafeUserAgent(): { browser?: string; os?: string } {
 }
 
 /**
+ * Get a coarse device type.
+ */
 function getDeviceType(): string {
   if (typeof window === 'undefined') return 'unknown'
 
@@ -355,7 +357,7 @@ export async function trackAbandonment(linkCode: string, timeSpentSeconds?: numb
 /**
  * Track page scroll depth
  */
-export function trackScrollDepth(linkCode: string): void {
+export function trackScrollDepth(_linkCode: string): (() => void) | void {
   if (typeof window === 'undefined') return
 
   let maxScroll = 0
@@ -385,7 +387,7 @@ export function trackScrollDepth(linkCode: string): void {
 /**
  * Track time spent on page
  */
-export function trackTimeSpent(linkCode: string, warningSeconds: number = 60): void {
+export function trackTimeSpent(linkCode: string, warningSeconds: number = 60): (() => void) | void {
   if (typeof window === 'undefined') return
 
   let startTime = Date.now()

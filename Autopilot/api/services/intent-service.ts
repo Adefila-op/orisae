@@ -31,7 +31,7 @@ export class IntentService {
     // Get user events for this link
     const result = await db.query(
       `SELECT * FROM user_events 
-       WHERE link_id = $1 AND user_identifier = $2 
+       WHERE link_id = $1 AND user_address = $2 
        ORDER BY created_at DESC LIMIT 100`,
       [link_id, user_identifier]
     )
