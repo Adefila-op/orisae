@@ -1,21 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Menu, Settings } from 'lucide-react'
 import DashboardMain from '@/components/dashboard/DashboardMain'
 import Sidebar from '@/components/dashboard/Sidebar'
-import NotificationPanel from '@/components/dashboard/NotificationPanel'
 
 export default function Dashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [isMobile, setIsMobile] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768)
-      if (window.innerWidth < 768) {
-        setSidebarOpen(false)
-      }
+      const desktop = window.innerWidth >= 1024
+      setIsDesktop(desktop)
+      setSidebarOpen(desktop)
     }
 
     handleResize()
@@ -24,33 +21,16 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(74,144,226,0.22),_transparent_35%),linear-gradient(180deg,_#d7d2c8_0%,_#8c98af_100%)] p-3 md:p-6">
+      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1520px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#15161c] shadow-[0_30px_80px_rgba(13,18,30,0.45)]">
+        <Sidebar
+          isOpen={sidebarOpen}
+          isDesktop={isDesktop}
+          onClose={() => setSidebarOpen(false)}
+        />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Navigation */}
-        <header className="border-b border-slate-700 bg-black/50 backdrop-blur-lg sticky top-0 z-40">
-          <div className="px-6 py-4 flex justify-between items-center">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-slate-800 rounded-lg transition text-gray-400 hover:text-white"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="flex gap-4 items-center">
-              <NotificationPanel />
-              <button className="p-2 hover:bg-slate-800 rounded-lg transition text-gray-400 hover:text-white" title="Settings">
-                <Settings size={20} />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
-          <DashboardMain />
+        <main className="min-w-0 flex-1 overflow-hidden">
+          <DashboardMain onToggleSidebar={() => setSidebarOpen((current) => !current)} />
         </main>
       </div>
     </div>

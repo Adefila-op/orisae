@@ -96,6 +96,7 @@ export const linksAPI = {
   create: (data: any) => apiClient.post('/links', data),
   list: () => apiClient.get('/links'),
   get: (code: string) => apiClient.get(`/links/code/${code}`),
+  platformStats: () => apiClient.get('/links/stats/by-platform'),
   toggle: (linkId: string, enabled: boolean) =>
     apiClient.patch(`/links/${linkId}/toggle`, { enabled }),
   delete: (linkId: string) => apiClient.delete(`/links/${linkId}`),
@@ -104,7 +105,7 @@ export const linksAPI = {
 export const eventsAPI = {
   trackClick: (data: any) => apiClient.post('/events/click', data),
   trackConversion: (data: any) => apiClient.post('/events/conversion', data),
-  trackAbandon: (data: any) => apiClient.post('/events/abandon', data),
+  trackAbandon: (data: any) => apiClient.post('/events/abandoned', data),
   getEvents: (code: string) => apiClient.get(`/events/${code}`),
 }
 

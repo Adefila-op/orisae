@@ -139,7 +139,7 @@ export function NotificationPanel() {
       {/* Notification Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+        className="relative inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/8 bg-white/5 text-white/65 transition hover:bg-white/10 hover:text-white"
         title="Notifications"
       >
         <Bell size={20} />
@@ -152,13 +152,13 @@ export function NotificationPanel() {
 
       {/* Notification Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+        <div className="absolute right-0 mt-3 w-[24rem] overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#1a1d24] shadow-[0_28px_60px_rgba(6,10,18,0.48)] z-50">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
-            <h3 className="text-lg font-semibold">Notifications</h3>
+          <div className="flex items-center justify-between border-b border-white/8 p-4">
+            <h3 className="text-lg font-semibold text-white">Notifications</h3>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="text-white/40 transition hover:text-white/80"
             >
               <X size={20} />
             </button>
@@ -167,19 +167,19 @@ export function NotificationPanel() {
           {/* Content */}
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
-              <div className="p-4 text-center text-gray-500">Loading...</div>
+              <div className="p-4 text-center text-white/40">Loading...</div>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <div className="p-8 text-center text-white/40">
                 <Bell size={32} className="mx-auto mb-2 opacity-50" />
                 <p>No notifications yet</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-200 dark:divide-slate-700">
+              <div className="divide-y divide-white/6">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors ${
-                      !notification.read ? 'bg-blue-50 dark:bg-slate-800/50' : ''
+                    className={`p-4 transition-colors hover:bg-white/4 ${
+                      !notification.read ? 'bg-sky-500/8' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -190,13 +190,13 @@ export function NotificationPanel() {
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-white">
+                        <p className="font-semibold text-sm text-white">
                           {notification.title}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                        <p className="mt-1 line-clamp-2 text-sm text-white/50">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 flex items-center gap-1">
+                        <p className="mt-2 flex items-center gap-1 text-xs text-white/35">
                           <Clock size={12} />
                           {formatTime(notification.created_at)}
                         </p>
@@ -207,7 +207,7 @@ export function NotificationPanel() {
                         {!notification.read && (
                           <button
                             onClick={() => handleMarkAsRead(notification.id)}
-                            className="text-blue-500 hover:text-blue-700 p-1"
+                            className="p-1 text-sky-300 transition hover:text-sky-200"
                             title="Mark as read"
                           >
                             <Check size={16} />
@@ -215,7 +215,7 @@ export function NotificationPanel() {
                         )}
                         <button
                           onClick={() => handleDelete(notification.id)}
-                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                          className="p-1 text-white/35 transition hover:text-white/70"
                           title="Delete"
                         >
                           <X size={16} />
@@ -230,10 +230,10 @@ export function NotificationPanel() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="p-4 border-t border-gray-200 dark:border-slate-700">
+            <div className="border-t border-white/8 p-4">
               <button
                 onClick={fetchNotifications}
-                className="w-full text-center text-sm text-blue-500 hover:text-blue-700 font-medium"
+                className="w-full rounded-2xl border border-white/8 bg-white/5 px-4 py-3 text-center text-sm font-medium text-sky-300 transition hover:bg-white/8 hover:text-sky-200"
               >
                 Refresh
               </button>
