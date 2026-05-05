@@ -8,6 +8,7 @@ import {
 } from "@/lib/app-state-context";
 import { useWalletConnection } from "@/lib/wallet-context";
 import { ConnectorSelector } from "@/components/ConnectorSelector";
+import { CreatorRegistrationForm, type CreatorDetails } from "@/components/CreatorRegistrationForm";
 import {
   CONTENT,
   CREATORS,
@@ -113,7 +114,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [apiIPs, setApiIPs] = useState<IP[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showConnectorSelector, setShowConnectorSelector] = useState(false);
+  const [showCreatorRegistration, setShowCreatorRegistration] = useState(false);
   const connectorPromiseRef = useRef<{ resolve: (val: any) => void; reject: (err: any) => void } | null>(null);
+  const creatorPromiseRef = useRef<{ resolve: (val: any) => void; reject: (err: any) => void } | null>(null);
   const walletConnection = useWalletConnection();
 
   // Restore auth on mount
@@ -362,10 +365,36 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             };
           }
 
+          // Show registration form and wait for submission
+          return new Promise((resolve, reject) => {
+            creatorPromiseRef.current = {
+              resolve: (result) => {
+                creatorPromiseRef.current = null;
+                resolve(result);
+              },
+              reject: (error) => {
+                creatorPromiseRef.current = null;
+                reject(error);
+              },
+            };
+            setShowCreatorRegistration(true);
+          });
+        } catch (error) {
+          console.error("Creator profile activation failed:", error);
+          return { ok: false as const, reason: (error as Error).message, currentVolume: 0, requiredVolume: 1 };
+        }
+      },
+
+      // Internal function to complete creator registration
+      _completeCreatorRegistration: async (details: CreatorDetails) => {
+        try {
           let updatedUser: User;
           try {
             updatedUser = await authAPI.updateProfile({
               is_creator: true,
+              username: details.username,
+              bio: details.bio,
+              profile_picture_url: details.profilePictureUrl,
             });
           } catch (error) {
             console.warn(
@@ -373,8 +402,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               error,
             );
             updatedUser = {
-              ...user,
+              ...user!,
               is_creator: true,
+              username: details.username,
+              bio: details.bio,
+              profile_picture_url: details.profilePictureUrl,
               updated_at: new Date().toISOString(),
             };
             localStorage.setItem(
@@ -389,10 +421,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             creatorProfileActive: true,
           }));
 
+          setShowCreatorRegistration(false);
+          creatorPromiseRef.current?.resolve({ ok: true });
+          creatorPromiseRef.current = null;
+
           return { ok: true as const };
         } catch (error) {
-          console.error("Creator profile activation failed:", error);
-          return { ok: false as const, reason: (error as Error).message, currentVolume: 0, requiredVolume: 1 };
+          console.error("Creator registration failed:", error);
+          creatorPromiseRef.current?.reject(error);
+          creatorPromiseRef.current = null;
+          throw error;
         }
       },
 
@@ -729,6 +767,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           }
         }}
         onConnected={handleConnectorSelected}
+      />
+      <CreatorRegistrationForm
+        isOpen={showCreatorRegistration}
+        onClose={() => {
+          setShowCreatorRegistration(false);
+          if (creatorPromiseRef.current) {
+            creatorPromiseRef.current.reject(new Error("Creator registration cancelled"));
+            creatorPromiseRef.current = null;
+          }
+        }}
+        onSubmit={(details) => value._completeCreatorRegistration(details)}
       />
       {children}
     </AppStateContext.Provider>

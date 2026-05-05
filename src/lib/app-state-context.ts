@@ -1,5 +1,6 @@
 import { createContext } from "react";
 import type { ContentItem, IpAsset } from "@/lib/data";
+import type { CreatorDetails } from "@/components/CreatorRegistrationForm";
 
 export type MarketListing = {
   id: string;
@@ -78,6 +79,8 @@ export type AppStateContextValue = AppStateSnapshot & {
     qty: number;
     pricePerShare: number;
   }) => Promise<{ ok: boolean; reason?: string; proceeds?: number }>;
+  getUserSalesCount: () => Promise<number>;
+  _completeCreatorRegistration: (details: CreatorDetails) => Promise<{ ok: boolean }>;
 };
 
 export const AppStateContext = createContext<AppStateContextValue | null>(null);
