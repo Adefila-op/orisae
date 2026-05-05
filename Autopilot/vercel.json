@@ -5,25 +5,5 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "public": false,
-  "env": {
-    "NEXT_PUBLIC_API_URL": {
-      "description": "API URL for frontend requests"
-    },
-    "DATABASE_URL": {
-      "description": "PostgreSQL database connection string"
-    },
-    "REDIS_HOST": {
-      "description": "Redis server host"
-    },
-    "REDIS_PORT": {
-      "description": "Redis server port"
-    },
-    "RESEND_API_KEY": {
-      "description": "Resend email API key for sending emails"
-    },
-    "JWT_SECRET": {
-      "description": "Secret key for JWT token signing"
-    }
-  },
   "regions": ["sfo1"]
 }
