@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useRef, type ReactNode } from "react";
 import { BrowserProvider, formatEther } from "ethers";
 import {
   AppStateContext,
@@ -6,6 +6,8 @@ import {
   type AppStateContextValue,
   type AppStateSnapshot,
 } from "@/lib/app-state-context";
+import { useWalletConnection } from "@/lib/wallet-context";
+import { ConnectorSelector } from "@/components/ConnectorSelector";
 import {
   CONTENT,
   CREATORS,
@@ -110,35 +112,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [apiIPs, setApiIPs] = useState<IP[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showConnectorSelector, setShowConnectorSelector] = useState(false);
+  const connectorPromiseRef = useRef<{ resolve: (val: any) => void; reject: (err: any) => void } | null>(null);
+  const walletConnection = useWalletConnection();
 
   // Restore auth on mount
   useEffect(() => {
     const restoreWallet = async () => {
-      if (!window.ethereum) return;
-
-      try {
-        const provider = new BrowserProvider(window.ethereum);
-        const accounts = await provider.send("eth_accounts", []);
-        const walletAddress = accounts[0];
-        if (!walletAddress) return;
-
-        let walletBalance = 0;
-        try {
-          const balance = await provider.getBalance(walletAddress);
-          walletBalance = Number(formatEther(balance));
-        } catch (balanceError) {
-          console.warn("Failed to fetch wallet balance, using 0:", balanceError);
-          // Continue without balance - it will be updated later
-        }
-
+      // Use wallet context to restore session
+      if (walletConnection.isConnected && walletConnection.address) {
         setState((prev) => ({
           ...prev,
           walletConnected: true,
-          walletAddress,
-          walletBalance,
+          walletAddress: walletConnection.address,
+          walletBalance: walletConnection.balance,
         }));
-      } catch (error) {
-        console.error("Failed to restore wallet session:", error);
       }
     };
 
@@ -227,6 +215,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
+  // Sync wallet balance from wallet context
+  useEffect(() => {
+    if (walletConnection.isConnected && state.walletConnected) {
+      setState((prev) => ({
+        ...prev,
+        walletBalance: walletConnection.balance,
+      }));
+    }
+  }, [walletConnection.balance, walletConnection.isConnected, state.walletConnected]);
+
   const value = useMemo<AppStateContextValue>(
     () => ({
       ...state,
@@ -241,43 +239,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
       // ===== REAL WALLET CONNECT =====
       connectWallet: async () => {
-        try {
-          setIsLoading(true);
-          if (!window.ethereum) {
-            throw new Error(
-              "No Web3 wallet detected. Please install one: MetaMask (metamask.io), Zerion (zerion.io), Coinbase Wallet, or WalletConnect",
-            );
-          }
-
-          const provider = new BrowserProvider(window.ethereum);
-          const accounts = await provider.send("eth_requestAccounts", []);
-          const walletAddress = accounts[0];
-
-          if (!walletAddress) throw new Error("No wallet selected");
-          
-          let walletBalance = 0;
-          try {
-            const balance = await provider.getBalance(walletAddress);
-            walletBalance = Number(formatEther(balance));
-          } catch (balanceError) {
-            console.warn("Failed to fetch wallet balance, using 0:", balanceError);
-            // Continue without balance - it will be updated later
-          }
-
-          setState((prev) => ({
-            ...prev,
-            walletConnected: true,
-            walletAddress,
-            walletBalance,
-          }));
-
-          return { ok: true as const };
-        } catch (error) {
-          console.error("Wallet connection failed:", error);
-          return { ok: false as const, reason: (error as Error).message };
-        } finally {
-          setIsLoading(false);
-        }
+        return new Promise((resolve, reject) => {
+          // Store the promise handlers for the modal to use
+          connectorPromiseRef.current = {
+            resolve,
+            reject,
+          };
+          // Show the connector selector modal
+          setShowConnectorSelector(true);
+        });
       },
 
       disconnectWallet: () => {
@@ -298,13 +268,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         try {
           setIsLoading(true);
 
-          if (!state.walletConnected || !window.ethereum) {
+          if (!state.walletConnected || !walletConnection.address) {
             throw new Error("Connect your wallet first to create a creator profile.");
           }
 
           const provider = new BrowserProvider(window.ethereum);
           const signer = await provider.getSigner();
-          const walletAddress = await signer.getAddress();
+          const walletAddress = walletConnection.address;
 
           // Generate authentication message
           const message = `creator-commerce-hub:${Date.now()}:${Math.random()
@@ -359,22 +329,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }));
       },
 
-      getUserTransactionVolume: async () => {
+      getUserSalesCount: async () => {
         if (!user) return 0;
         try {
-          // In demo mode, return 0 (will show in UI)
-          if (user.id.startsWith("local-")) return 0;
+          // In demo mode, return count of created content as proxy for sales
+          if (user.id.startsWith("local-")) {
+            return state.createdContent.length;
+          }
           
-          // For API mode, this would be fetched from backend
-          // For now, calculate from transactions if available
-          const transactions = state.contentOrders || [];
-          const totalVolume = transactions.reduce(
-            (sum, tx) => sum + (tx.amount || 0),
-            0
-          );
-          return totalVolume;
+          // For API mode, fetch from backend
+          const result = await userAPI.getSalesCount();
+          return result.salesCount;
         } catch (error) {
-          console.error("Failed to get transaction volume:", error);
+          console.error("Failed to get sales count:", error);
           return 0;
         }
       },
@@ -383,16 +350,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         try {
           if (!user) throw new Error("Not signed in");
 
-          // Check transaction volume
-          const volume = await value.getUserTransactionVolume();
-          const minVolumeRequired = 10000; // $100 in cents
+          // Check sales count - need at least 1 sale
+          const salesCount = await value.getUserSalesCount();
           
-          if (volume < minVolumeRequired) {
+          if (salesCount < 1) {
             return {
               ok: false as const,
-              reason: `You need $100 trading volume to create IP assets. Current: $${(volume / 100).toFixed(2)}`,
-              currentVolume: volume,
-              requiredVolume: minVolumeRequired,
+              reason: `You need to have made at least 1 sale of a digital product to create IP assets. Current sales: ${salesCount}`,
+              currentVolume: salesCount,
+              requiredVolume: 1,
             };
           }
 
@@ -426,7 +392,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           return { ok: true as const };
         } catch (error) {
           console.error("Creator profile activation failed:", error);
-          return { ok: false as const, reason: (error as Error).message, currentVolume: 0, requiredVolume: 10000 };
+          return { ok: false as const, reason: (error as Error).message, currentVolume: 0, requiredVolume: 1 };
         }
       },
 
@@ -730,5 +696,41 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     [apiIPs, state, user],
   );
 
-  return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
+  const handleConnectorSelected = () => {
+    // Update state from wallet context
+    if (walletConnection.isConnected && walletConnection.address) {
+      setState((prev) => ({
+        ...prev,
+        walletConnected: true,
+        walletAddress: walletConnection.address,
+        walletBalance: walletConnection.balance,
+      }));
+      
+      // Resolve the promise
+      connectorPromiseRef.current?.resolve({ ok: true });
+      connectorPromiseRef.current = null;
+    }
+  };
+
+  const handleConnectorError = (error: Error) => {
+    connectorPromiseRef.current?.reject(error);
+    connectorPromiseRef.current = null;
+  };
+
+  return (
+    <AppStateContext.Provider value={value}>
+      <ConnectorSelector
+        isOpen={showConnectorSelector}
+        onClose={() => {
+          setShowConnectorSelector(false);
+          if (connectorPromiseRef.current && !walletConnection.isConnected) {
+            connectorPromiseRef.current.reject(new Error("Wallet connection cancelled"));
+            connectorPromiseRef.current = null;
+          }
+        }}
+        onConnected={handleConnectorSelected}
+      />
+      {children}
+    </AppStateContext.Provider>
+  );
 }

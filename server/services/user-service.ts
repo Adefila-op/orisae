@@ -188,4 +188,18 @@ export class UserService {
     const totalVolume = transactions.reduce((sum, tx) => sum + (tx.amount_value || 0), 0);
     return totalVolume;
   }
+
+  /**
+   * Get count of sales (transactions where user is seller)
+   */
+  async getUserSalesCount(userId: string): Promise<number> {
+    const transactions = await this.db
+      .select({
+        id: schema.transactions.id,
+      })
+      .from(schema.transactions)
+      .where(eq(schema.transactions.seller_id, userId));
+
+    return transactions.length;
+  }
 }

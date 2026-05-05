@@ -229,5 +229,23 @@ export function createUserRoutes(options: UserRoutesOptions): Hono {
     }
   });
 
+  /**
+   * GET /api/users/me/sales-count - Get current user's sales count
+   */
+  router.get("/api/users/me/sales-count", async (c) => {
+    try {
+      const auth = await authenticateRequest(c.req.raw, userService);
+      requireAuth(auth);
+
+      const salesCount = await userService.getUserSalesCount(auth.user.id);
+
+      const response = createSuccessResponse({ salesCount }, 200);
+      return createHTTPResponse(response);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      return createHTTPResponse(errorResponse);
+    }
+  });
+
   return router;
 }

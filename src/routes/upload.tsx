@@ -56,7 +56,7 @@ function UploadPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
-  const [creatorVolume, setCreatorVolume] = useState(0);
+  const [creatorSales, setCreatorSales] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fileAccept = useMemo(
@@ -204,8 +204,8 @@ function UploadPage() {
                 done={creatorProfileActive}
                 title="3. Activate creator profile"
                 body={
-                  creatorVolume > 0 && creatorVolume < 10000
-                    ? `You need $100 trading volume to create IP. Current: $${(creatorVolume / 100).toFixed(2)}. Buy some IP tokens to unlock!`
+                  creatorSales > 0 && creatorSales < 1
+                    ? `You need at least 1 sale to create IP. Current: ${creatorSales} sale(s). Sell a digital product to unlock!`
                     : "Only activated creator profiles can publish products and launch IP."
                 }
                 actionLabel={creatorProfileActive ? "Creator profile active" : "Activate profile"}
@@ -221,10 +221,10 @@ function UploadPage() {
                     if (result.ok) {
                       toast.success("Creator profile activated");
                     } else {
-                      setCreatorVolume(result.currentVolume || 0);
-                      const shortBy = (result.requiredVolume || 10000) - (result.currentVolume || 0);
+                      setCreatorSales(result.currentVolume || 0);
+                      const shortBy = (result.requiredVolume || 1) - (result.currentVolume || 0);
                       toast.error(
-                        `Need $100 trading volume. Current: $${((result.currentVolume || 0) / 100).toFixed(2)}. Buy $${(shortBy / 100).toFixed(2)} more in IP tokens!`
+                        `You need at least 1 sale of a digital product to create IP. Current: ${result.currentVolume} sale(s). ${shortBy > 0 ? `Make ${shortBy} more sale(s) to unlock!` : 'Refresh and try again!'}`
                       );
                     }
                   } catch (error) {

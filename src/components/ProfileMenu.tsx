@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogOut, Crown, TrendingUp, Copy, Check } from "lucide-react";
+import { LogOut, Crown, Copy, Check } from "lucide-react";
 import { useAppState } from "@/lib/use-app-state";
 import { cn } from "@/lib/utils";
 
@@ -8,25 +8,21 @@ export function ProfileMenu() {
     signedIn,
     creatorProfileActive,
     walletAddress,
-    contentOrders,
     enableCreatorProfile,
     signOut,
-    getUserTransactionVolume,
+    getUserSalesCount,
   } = useAppState();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [volume, setVolume] = useState(0);
+  const [salesCount, setSalesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  // Calculate volume from orders
-  const calculatedVolume = (contentOrders || []).reduce((sum, order) => sum + order.amount, 0);
 
   const handleOpenMenu = async () => {
     if (!isOpen) {
       setIsLoading(true);
-      const vol = await getUserTransactionVolume();
-      setVolume(vol || calculatedVolume);
+      const count = await getUserSalesCount();
+      setSalesCount(count);
       setIsLoading(false);
     }
     setIsOpen(!isOpen);
@@ -54,11 +50,9 @@ export function ProfileMenu() {
     return null;
   }
 
-  const displayVolume = volume || calculatedVolume;
-  const minRequired = 10000; // $100 in cents
-  const volumePercentage = Math.min((displayVolume / minRequired) * 100, 100);
-  const canCreateIP = displayVolume >= minRequired;
-  const shortBy = Math.max(0, minRequired - displayVolume);
+  const minRequired = 1; // Need at least 1 sale
+  const canCreateIP = salesCount >= minRequired;
+  const shortBy = Math.max(0, minRequired - salesCount);
 
   return (
     <div className="relative">
@@ -118,27 +112,20 @@ export function ProfileMenu() {
 
                 <div className="border-t border-border" />
 
-                {/* Trading Volume */}
+                {/* Sales Count */}
                 <div className="space-y-3">
                   <p className="text-xs font-semibold text-muted-foreground">
-                    TRADING VOLUME
+                    DIGITAL PRODUCT SALES
                   </p>
 
                   <div className="space-y-2">
                     <div className="flex items-baseline justify-between">
                       <p className="text-lg font-bold">
-                        ${(displayVolume / 100).toFixed(2)}
+                        {salesCount}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        / $100.00 needed
+                        / 1 needed to create IP
                       </p>
-                    </div>
-
-                    <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                      <div
-                        className="h-full bg-primary transition-all duration-300"
-                        style={{ width: `${volumePercentage}%` }}
-                      />
                     </div>
 
                     <p className="text-xs text-muted-foreground">
@@ -148,7 +135,7 @@ export function ProfileMenu() {
                         </span>
                       ) : (
                         <span>
-                          Buy ${(shortBy / 100).toFixed(2)} more to unlock creator features
+                          Make {shortBy} more sale{shortBy !== 1 ? 's' : ''} to unlock creator features
                         </span>
                       )}
                     </p>
@@ -185,7 +172,7 @@ export function ProfileMenu() {
                   ) : (
                     <div className="rounded-lg bg-secondary px-3 py-2 border border-border">
                       <p className="text-xs text-muted-foreground">
-                        Unlock creator mode by reaching $100 trading volume
+                        Make at least 1 sale to unlock creator mode
                       </p>
                     </div>
                   )}

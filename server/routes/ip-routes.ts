@@ -37,21 +37,20 @@ export function createIPRoutes(options: IPRoutesOptions): Hono {
 
   /**
    * POST /api/ips - Create new IP
-   * Requires $100 minimum trading volume
+   * Requires at least 1 sale of digital products
    */
   router.post("/api/ips", async (c) => {
     try {
       const auth = await authenticateRequest(c.req.raw, userService);
       requireAuth(auth);
 
-      // Check user has minimum $100 (10000 cents) trading volume
-      const userVolume = await userService.getUserTransactionVolume(auth.user.id);
-      const minVolumeRequired = 10000; // $100 in cents
+      // Check user has made at least 1 sale
+      const salesCount = await userService.getUserSalesCount(auth.user.id);
       
-      if (userVolume < minVolumeRequired) {
+      if (salesCount < 1) {
         throw new AppError(
           ERROR_CODES.FORBIDDEN,
-          `Minimum trading volume of $100 required to create IP. Current volume: $${(userVolume / 100).toFixed(2)}`,
+          `You need to have made at least one sale of a digital product to create IP assets. Current sales: ${salesCount}`,
           403
         );
       }

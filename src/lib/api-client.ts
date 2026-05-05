@@ -222,6 +222,13 @@ export const userAPI = {
   withdraw: async (amount: number): Promise<User> => {
     return apiCall("/api/users/withdraw", "POST", { amount });
   },
+
+  /**
+   * Get current user's sales count
+   */
+  getSalesCount: async (): Promise<{ salesCount: number }> => {
+    return apiCall("/api/users/me/sales-count", "GET");
+  },
 };
 
 /**
