@@ -12,7 +12,6 @@ COPY . .
 # Build Next.js
 RUN npm run build
 
-EXPOSE 3000 3001
+EXPOSE 3000
 
-# Start both frontend and backend
-CMD ["sh", "-c", "npm start & npm run api"]
+CMD ["npm", "start"]

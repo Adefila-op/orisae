@@ -1,32 +1,33 @@
-import { db } from '@/server/db'
-import { getOptionalUser } from '@/server/auth'
-import { error, json } from '@/server/http'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
+import { getCreatorIdentityFromRequest, setLinkEnabled } from "@/lib/dashboard-data";
 
-export const runtime = 'nodejs'
+export const runtime = "nodejs";
 
-export async function DELETE(
+export async function PATCH(
   request: NextRequest,
-  { params }: { params: { linkId: string } }
+  { params }: { params: { linkId: string } },
 ) {
-  const user = getOptionalUser(request)
-  if (!user) {
-    return error('Unauthorized: Invalid token', 401)
-  }
-
   try {
-    const { linkId } = params
-    const result = await db.query(
-      'DELETE FROM smart_links WHERE id = $1 AND creator_id = $2',
-      [linkId, user.id]
-    )
-
-    if (!result.rowCount) {
-      return error('Link not found or unauthorized', 404)
+    const body = (await request.json()) as { enabled?: boolean };
+    if (typeof body.enabled !== "boolean") {
+      return NextResponse.json({ error: "enabled must be a boolean" }, { status: 400 });
     }
 
-    return json({ success: true, message: 'Link deleted' })
-  } catch (err) {
-    return error((err as Error).message || 'Failed to delete link')
+    return NextResponse.json(
+      await setLinkEnabled(
+        params.linkId,
+        body.enabled,
+        getCreatorIdentityFromRequest({
+          authorization: request.headers.get("authorization"),
+          creatorIdHeader: request.headers.get("x-creator-id"),
+          walletHeader: request.headers.get("x-wallet-address"),
+        }),
+      ),
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as Error).message || "Failed to update link state" },
+      { status: 500 },
+    );
   }
 }

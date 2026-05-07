@@ -66,12 +66,26 @@ export function WalletContextProvider({ children }: { children: ReactNode }) {
       if (!connector) {
         throw new Error(`Connector ${connectorId} not found`);
       }
+      
+      // Check if already connected to this connector
+      if (isConnected && address) {
+        // Already connected, just return
+        return Promise.resolve();
+      }
+      
       return new Promise((resolve, reject) => {
         wagmiConnect(
           { connector },
           {
             onSuccess: () => resolve(),
-            onError: (err) => reject(err),
+            onError: (err) => {
+              // Handle "already connected" error gracefully
+              if (err.message?.includes('Connector already connected') || err.message?.includes('already connected')) {
+                resolve();
+              } else {
+                reject(err);
+              }
+            },
           }
         );
       });

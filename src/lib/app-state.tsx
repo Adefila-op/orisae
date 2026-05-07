@@ -353,18 +353,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         try {
           if (!user) throw new Error("Not signed in");
 
-          // Check sales count - need at least 1 sale
-          const salesCount = await value.getUserSalesCount();
-          
-          if (salesCount < 1) {
-            return {
-              ok: false as const,
-              reason: `You need to have made at least 1 sale of a digital product to create IP assets. Current sales: ${salesCount}`,
-              currentVolume: salesCount,
-              requiredVolume: 1,
-            };
-          }
-
           if (details) {
             return await value._completeCreatorRegistration(details);
           }
@@ -447,6 +435,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         try {
           if (!user || !state.walletConnected || !state.signedIn || !state.creatorProfileActive) {
             return { contentId: "", ipId: "", error: "Creator profile required" };
+          }
+
+          // If creating IP (tokenizing), require minimum sales volume
+          if (tokenize) {
+            const salesCount = await value.getUserSalesCount();
+            if (salesCount < 100) {
+              return {
+                contentId: "",
+                ipId: "",
+                error: `You need at least 100 sales of digital products in a month to create IP assets. Current sales: ${salesCount}`,
+              };
+            }
           }
 
           const now = Date.now();

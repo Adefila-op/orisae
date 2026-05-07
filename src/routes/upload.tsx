@@ -42,7 +42,6 @@ function UploadPage() {
     connectWallet,
     signIn,
     enableCreatorProfile,
-    getUserSalesCount,
     publishContent,
     createdContent,
     createdIpAssets,
@@ -58,7 +57,6 @@ function UploadPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
-  const [creatorSales, setCreatorSales] = useState(0);
   const [showCreatorForm, setShowCreatorForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -207,9 +205,7 @@ function UploadPage() {
                 done={creatorProfileActive}
                 title="3. Activate creator profile"
                 body={
-                  creatorSales > 0 && creatorSales < 1
-                    ? `You need at least 1 sale to create IP. Current: ${creatorSales} sale(s). Sell a digital product to unlock!`
-                    : "Only activated creator profiles can publish products and launch IP."
+                  "Activated creators can publish digital products. IP fractionalization requires at least 100 sales within a month."
                 }
                 actionLabel={creatorProfileActive ? "Creator profile active" : "Activate profile"}
                 isLoading={isActivating}
@@ -218,24 +214,7 @@ function UploadPage() {
                     toast.error("Sign in as creator first.");
                     return;
                   }
-                  setIsActivating(true);
-                  try {
-                    const salesCount = await getUserSalesCount();
-                    if (salesCount >= 1) {
-                      setCreatorSales(salesCount);
-                      setShowCreatorForm(true);
-                    } else {
-                      setCreatorSales(salesCount);
-                      const shortBy = 1 - salesCount;
-                      toast.error(
-                        `You need at least 1 sale of a digital product to create IP. Current: ${salesCount} sale(s). ${shortBy > 0 ? `Make ${shortBy} more sale(s) to unlock!` : "Refresh and try again!"}`
-                      );
-                    }
-                  } catch (error) {
-                    toast.error((error as Error).message || "Failed to activate creator profile");
-                  } finally {
-                    setIsActivating(false);
-                  }
+                  setShowCreatorForm(true);
                 }}
               />
             </div>
@@ -254,7 +233,6 @@ function UploadPage() {
                         setShowCreatorForm(false);
                         toast.success("Creator profile created");
                       } else {
-                        setCreatorSales(result.currentVolume || 0);
                         toast.error(result.reason || "Failed to create creator profile");
                       }
                     } finally {
@@ -436,7 +414,7 @@ function UploadPage() {
           <div>
             <p className="text-sm font-semibold">Also tokenize as creator IP</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Let fans buy fractional shares and stake into liquidity pools.
+              Let fans buy fractional shares and stake into liquidity pools. Requires at least 100 sales per month.
             </p>
           </div>
         </button>

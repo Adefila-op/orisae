@@ -1,9 +1,38 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
   "public": false,
-  "regions": ["sfo1"]
+  "regions": ["sfo1"],
+  "functions": {
+    "src/app/api/cron/agent/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/analytics/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/email/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/agent/run/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/agent",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/analytics",
+      "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/cron/email",
+      "schedule": "0 7 * * *"
+    }
+  ]
 }

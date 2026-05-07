@@ -1,19 +1,15 @@
-import { db } from '@/server/db'
-import { error, json } from '@/server/http'
+import { NextResponse } from "next/server";
+import { getStatusSnapshot } from "@/lib/dashboard-data";
 
-export const runtime = 'nodejs'
+export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    await db.query('SELECT NOW()')
-
-    return json({
-      api: 'running',
-      version: '1.0.0',
-      timestamp: new Date(),
-      environment: process.env.NODE_ENV,
-    })
-  } catch (err) {
-    return error((err as Error).message || 'Database connection failed', 503)
+    return NextResponse.json(await getStatusSnapshot());
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as Error).message || "Status check failed" },
+      { status: 503 },
+    );
   }
 }

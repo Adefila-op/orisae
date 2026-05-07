@@ -28,14 +28,8 @@
       "@/components/*": [
         "./src/components/*"
       ],
-      "@/api/*": [
-        "./api/*"
-      ],
       "@/db/*": [
         "./db/*"
-      ],
-      "@/services/*": [
-        "./api/services/*"
       ],
       "@/types/*": [
         "./types/*"
@@ -51,7 +45,6 @@
   },
   "include": [
     "src",
-    "api",
     "db",
     "types",
     "next-env.d.ts",
@@ -59,6 +52,7 @@
   ],
   "exclude": [
     "node_modules",
-    ".next"
+    ".next",
+    "src/components/ui"
   ]
 }

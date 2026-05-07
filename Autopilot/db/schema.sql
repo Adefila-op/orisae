@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
   total_conversions INT DEFAULT 0,
   intent_score DECIMAL(5, 2) DEFAULT 0,
   subscribed_to_notifications BOOLEAN DEFAULT true,
+  agent_enabled BOOLEAN DEFAULT true,
+  agent_last_run_at TIMESTAMP,
+  agent_last_run_stats JSONB DEFAULT '{}',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
   last_active_at TIMESTAMP
@@ -135,6 +138,24 @@ CREATE TABLE IF NOT EXISTS email_queue (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Creator Integrations
+CREATE TABLE IF NOT EXISTS creator_integrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider VARCHAR(100) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  sync_mode VARCHAR(50) NOT NULL DEFAULT 'api',
+  status VARCHAR(50) NOT NULL DEFAULT 'planned', -- planned, connected, attention
+  enabled BOOLEAN DEFAULT false,
+  config JSONB DEFAULT '{}',
+  last_synced_at TIMESTAMP,
+  last_sync_summary JSONB DEFAULT '{}',
+  last_error TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (creator_id, provider)
+);
+
 -- Analytics & Aggregates
 CREATE TABLE IF NOT EXISTS daily_analytics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -164,5 +185,7 @@ CREATE INDEX IF NOT EXISTS idx_offers_link ON offers(link_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
 CREATE INDEX IF NOT EXISTS idx_email_queue_status ON email_queue(status);
+CREATE INDEX IF NOT EXISTS idx_creator_integrations_creator ON creator_integrations(creator_id);
+CREATE INDEX IF NOT EXISTS idx_creator_integrations_provider ON creator_integrations(provider);
 CREATE INDEX IF NOT EXISTS idx_daily_analytics_creator ON daily_analytics(creator_id, date);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_analytics_creator_date ON daily_analytics(creator_id, date);

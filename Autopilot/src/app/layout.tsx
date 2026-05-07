@@ -1,25 +1,47 @@
-import type { Metadata } from 'next'
-import './globals.css'
+import type { Metadata } from "next";
+import { Inter, Space_Grotesk } from "next/font/google";
+import "@/styles.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
+});
 
 export const metadata: Metadata = {
-  title: 'Autopilot - Conversion Recovery for Creators',
-  description: 'Smart link tracking, intent scoring, and offer automation for digital creators',
-  keywords: ['conversion recovery', 'smart links', 'creator tools', 'digital products'],
-  authors: [{ name: 'Autopilot' }],
-}
+  metadataBase: new URL("https://autopilot.popup.dev"),
+  title: {
+    default: "Autopilot | Recover Lost Sales for Digital Creators",
+    template: "%s | Autopilot",
+  },
+  description:
+    "Autopilot helps digital creators recover missed revenue with smart links, intent scoring, and automated follow-up offers.",
+  openGraph: {
+    title: "Autopilot | Recover Lost Sales for Digital Creators",
+    description:
+      "Track intent, trigger the right follow-up, and monitor recovered revenue from one creator dashboard.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Autopilot | Recover Lost Sales for Digital Creators",
+    description:
+      "Track intent, trigger the right follow-up, and monitor recovered revenue from one creator dashboard.",
+  },
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#3B82F6" />
-      </head>
-      <body className="bg-black text-white">{children}</body>
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+      <body>{children}</body>
     </html>
-  )
+  );
 }
