@@ -6,7 +6,6 @@ import {
   FileText,
   Image as ImageIcon,
   Wrench,
-  Check,
   TrendingUp,
   Package,
 } from "lucide-react";
@@ -57,7 +56,6 @@ function UploadPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
-  const [showCreatorForm, setShowCreatorForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fileAccept = useMemo(
@@ -138,100 +136,98 @@ function UploadPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <h1 className="font-bold">Creator access</h1>
+            <h1 className="font-bold">Become a Creator</h1>
             <span className="w-10" />
           </div>
         </header>
 
         <div className="mx-auto max-w-md space-y-5 px-5 pt-6">
-          <div className="rounded-3xl bg-card p-6 shadow-pop">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Creator Console
-            </p>
-            <h2 className="mt-2 text-2xl font-bold">
-              Connect a wallet and activate creator access
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Collectors only need a wallet. Publishing is reserved for creators who explicitly
-              connect, sign in, and activate a creator profile.
-            </p>
-
-            <div className="mt-5 space-y-3">
-              <AccessStep
-                done={walletConnected}
-                title="1. Connect wallet"
-                body="Collectors can stop here. Creators continue to set up publishing access."
-                actionLabel={walletConnected ? "Wallet connected" : "Connect wallet"}
-                isLoading={isConnecting}
-                onAction={async () => {
-                  setIsConnecting(true);
-                  try {
-                    const result = await connectWallet();
-                    if (result.ok) {
-                      toast.success("Wallet connected");
-                    } else {
-                      toast.error(result.reason || "Failed to connect wallet");
+          <div className="rounded-3xl bg-card p-6 shadow-pop space-y-4">
+            {/* Step 1: Connect Wallet */}
+            {!walletConnected && (
+              <>
+                <div>
+                  <h2 className="text-lg font-bold">1. Connect Your Wallet</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Start by connecting your Web3 wallet to get started.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setIsConnecting(true);
+                    try {
+                      const result = await connectWallet();
+                      if (result.ok) {
+                        toast.success("Wallet connected");
+                      } else {
+                        toast.error(result.reason || "Failed to connect wallet");
+                      }
+                    } catch (error) {
+                      toast.error((error as Error).message || "Wallet connection failed");
+                    } finally {
+                      setIsConnecting(false);
                     }
-                  } catch (error) {
-                    toast.error((error as Error).message || "Wallet connection failed");
-                  } finally {
-                    setIsConnecting(false);
-                  }
-                }}
-              />
-              <AccessStep
-                done={signedIn}
-                title="2. Sign in as creator"
-                body="This creates or restores your creator account. Collector wallets do not need this."
-                actionLabel={signedIn ? "Creator signed in" : "Sign in as creator"}
-                isLoading={isSigningIn}
-                onAction={async () => {
-                  setIsSigningIn(true);
-                  try {
-                    const result = await signIn();
-                    if (result.ok) {
-                      toast.success("Signed in successfully!");
-                    } else {
-                      toast.error(result.reason || "Failed to sign in");
-                    }
-                  } catch (error) {
-                    toast.error((error as Error).message || "Sign in failed");
-                  } finally {
-                    setIsSigningIn(false);
-                  }
-                }}
-              />
-              <AccessStep
-                done={creatorProfileActive}
-                title="3. Activate creator profile"
-                body={
-                  "Activated creators can publish digital products. IP fractionalization requires at least 100 sales within a month."
-                }
-                actionLabel={creatorProfileActive ? "Creator profile active" : "Activate profile"}
-                isLoading={isActivating}
-                onAction={async () => {
-                  if (!signedIn) {
-                    toast.error("Sign in as creator first.");
-                    return;
-                  }
-                  setShowCreatorForm(true);
-                }}
-              />
-            </div>
+                  }}
+                  disabled={isConnecting}
+                  className="w-full rounded-full bg-ink py-3 font-semibold text-ink-foreground shadow-ink disabled:opacity-50"
+                >
+                  {isConnecting ? "Connecting..." : "Connect Wallet"}
+                </button>
+              </>
+            )}
 
-            {showCreatorForm && !creatorProfileActive ? (
-              <div className="mt-5 rounded-2xl border border-border bg-background p-4">
+            {/* Step 2: Sign In */}
+            {walletConnected && !signedIn && (
+              <>
+                <div>
+                  <h2 className="text-lg font-bold">2. Sign In as Creator</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Sign in to create or restore your creator account.
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setIsSigningIn(true);
+                    try {
+                      const result = await signIn();
+                      if (result.ok) {
+                        toast.success("Signed in successfully!");
+                      } else {
+                        toast.error(result.reason || "Failed to sign in");
+                      }
+                    } catch (error) {
+                      toast.error((error as Error).message || "Sign in failed");
+                    } finally {
+                      setIsSigningIn(false);
+                    }
+                  }}
+                  disabled={isSigningIn}
+                  className="w-full rounded-full bg-ink py-3 font-semibold text-ink-foreground shadow-ink disabled:opacity-50"
+                >
+                  {isSigningIn ? "Signing in..." : "Sign In"}
+                </button>
+              </>
+            )}
+
+            {/* Step 3: Create Creator Profile */}
+            {walletConnected && signedIn && !creatorProfileActive && (
+              <>
+                <div>
+                  <h2 className="text-lg font-bold">3. Create Your Creator Profile</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Fill in your details to complete your creator profile.
+                  </p>
+                </div>
                 <CreatorRegistrationForm
                   mode="inline"
                   isLoading={isActivating}
-                  submitLabel="Create creator profile"
+                  submitLabel="Become a Creator"
                   onSubmit={async (details: CreatorDetails) => {
                     setIsActivating(true);
                     try {
                       const result = await enableCreatorProfile(details);
                       if (result.ok) {
-                        setShowCreatorForm(false);
-                        toast.success("Creator profile created");
+                        toast.success("Creator profile created!");
                       } else {
                         toast.error(result.reason || "Failed to create creator profile");
                       }
@@ -240,19 +236,8 @@ function UploadPage() {
                     }
                   }}
                 />
-              </div>
-            ) : null}
-
-            <button
-              type="button"
-              disabled={!walletConnected || !signedIn || !creatorProfileActive}
-              onClick={() => toast.success("Creator access unlocked")}
-              className="mt-5 w-full rounded-full bg-ink py-3.5 font-semibold text-ink-foreground shadow-ink disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {walletConnected && signedIn && creatorProfileActive
-                ? "Access granted"
-                : "Complete creator setup"}
-            </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -426,49 +411,6 @@ function UploadPage() {
           Publish listing
         </button>
       </form>
-    </div>
-  );
-}
-
-function AccessStep({
-  done,
-  title,
-  body,
-  actionLabel,
-  isLoading,
-  onAction,
-}: {
-  done: boolean;
-  title: string;
-  body: string;
-  actionLabel: string;
-  isLoading?: boolean;
-  onAction: () => Promise<void> | void;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-background p-4">
-      <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-            done ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground",
-          )}
-        >
-          {done ? <Check className="h-3.5 w-3.5" /> : title.split(".")[0]}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onAction}
-        disabled={done || isLoading}
-        className="mt-3 w-full rounded-full bg-secondary py-2 text-sm font-semibold disabled:opacity-60"
-      >
-        {isLoading ? "Loading..." : actionLabel}
-      </button>
     </div>
   );
 }
